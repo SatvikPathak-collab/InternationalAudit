@@ -38,7 +38,8 @@ class ComputeRule:
         self, df: pd.DataFrame, extra_condition: list[dict]
     ) -> pd.Series:
         mask = pd.Series([True] * len(df))
-        approved_mask = df["CLAIM_STATUS"].apply(lambda x : x.lower() == "approved")
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        approved_mask = df[status_col].apply(lambda x : x.lower() == "approved")
 
         for condition in extra_condition:
             col: str = condition.get("column", "")
@@ -82,7 +83,9 @@ class ComputeRule:
         is_inclusion_present = pd.Series([True] * len(df))
         is_exclusion_absent = pd.Series([True] * len(df))
         is_extra_conditions_present = pd.Series([True] * len(df))
-        is_approved = df["CLAIM_STATUS"].apply(lambda x : x.lower() == "approved")
+
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        is_approved = df[status_col].apply(lambda x : x.lower() == "approved")
 
         if inclusion is None and exclusion is None and extra_condition is None:
             raise RuntimeError(
@@ -598,11 +601,15 @@ class ComputeRule:
 
         pattern = "|".join(keywords)
 
+        # Determine which status column to use
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+
+
         # Check if any of the keywords are present
         is_trigger_present = (
             df["PRESENTING_COMPLAINTS"]
             .str.lower()
-            .str.contains(pattern, na=False) & df["CLAIM_STATUS"].apply(lambda x : x.lower() == "approved")  # na=False handles missing values
+            .str.contains(pattern, na=False) & df[status_col].apply(lambda x : x.lower() == "approved")  # na=False handles missing values
         )
 
         trigger_name = "General exclusion - Sick Leave"
@@ -656,6 +663,8 @@ class ComputeRule:
             exclusion_column=exclusion_column,
             extra_condition=extra_conditions,
         )
+
+        df = df.drop(columns = ["AGE_OUTSIDE_24_65"])
         return df
 
     @rule_method(active=True)
@@ -809,7 +818,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_large_dressing_flag"])
+        df = df.drop(columns = ["_large_dressing_flag"])
         return df
 
     @rule_method(active=True)
@@ -830,7 +839,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_sidra_medical_flag"])
+        df = df.drop(columns = ["_sidra_medical_flag"])
         return df
 
     @rule_method(active=True)
@@ -874,7 +883,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_glucosamine_flag"])
+        df = df.drop(columns = ["_glucosamine_flag"])
         return df
 
     @rule_method(active=True)
@@ -887,7 +896,10 @@ class ComputeRule:
             ("85652", "86141"),
         ]
 
-        df["_GROUP_KEY"] = df["PRE_AUTH_NUMBER"].where(df["PRE_AUTH_NUMBER"].notna(), df["CLAIM_NUMBER"])
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
+
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
 
         # Group by claim/preauth number
         for claim_id, group in df.groupby("_GROUP_KEY"):
@@ -898,7 +910,8 @@ class ComputeRule:
                 if code1 in activity_codes and code2 in activity_codes:
                     mask = (df["_GROUP_KEY"] == claim_id) & (
                         df["ACTIVITY_CODE"].astype(str).isin([code1, code2])
-                    )
+                    ) & df[status_col].apply(lambda x : x.lower() == "approved")
+
                     df.loc[mask, "Filter Applied"] = df.loc[mask, "Filter Applied"].apply(
                         lambda x: [trigger_name] if not isinstance(x, list) else x + [trigger_name]
                     )
@@ -933,7 +946,7 @@ class ComputeRule:
             extra_condition=extra_conditions
         )
 
-        df.drop(columns = ["_probiotic"])
+        df = df.drop(columns = ["_probiotic"])
         return df
 
     @rule_method(active=True)
@@ -991,7 +1004,7 @@ class ComputeRule:
             extra_condition=extra_conditions
         )
 
-        df.drop(columns = ["_ondansetron"])
+        df = df.drop(columns = ["_ondansetron"])
         return df
 
     @rule_method(active=True)
@@ -1091,7 +1104,8 @@ class ComputeRule:
         ]
         inclusion_column: str = "ACTIVITY_CODE"
 
-        pre_auth_mask = df["PRE_AUTH_NUMBER"].isna() | ~df["PRESENTING_COMPLAINTS"].str.contains(r'PA\s?111', regex=True, na=False)
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        pre_auth_mask = df[pre_auth_col].isna() | ~df["PRESENTING_COMPLAINTS"].str.contains(r'PA\s?111', regex=True, na=False)
         df["_pre_auth"] = pre_auth_mask
         
         extra_conditions: list[dict] = [
@@ -1104,6 +1118,8 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_conditions,
         )
+
+        df = df.drop(columns = ["_pre_auth"])
         return df
 
     @rule_method(active=True)
@@ -1128,12 +1144,13 @@ class ComputeRule:
             if pd.isna(val) or str(val).strip().lower() in {"", "nan"}:
                 return ""
             return str(val).strip()
-    
-        df["PRE_AUTH_NUMBER"] = df["PRE_AUTH_NUMBER"].apply(normalize_id)
+
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        df[pre_auth_col] = df[pre_auth_col].apply(normalize_id)
         df["CLAIM_NUMBER"] = df["CLAIM_NUMBER"].apply(normalize_id)
 
         df["_group_key"] = df.apply(
-            lambda row: (row["PRE_AUTH_NUMBER"] if row["PRE_AUTH_NUMBER"] else row['CLAIM_NUMBER']),
+            lambda row: (row[pre_auth_col] if row[pre_auth_col] else row['CLAIM_NUMBER']),
             axis=1
         )
 
@@ -1175,7 +1192,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_capsaicin_belladona"])
+        df = df.drop(columns = ["_capsaicin_belladona"])
         return df
 
     @rule_method(active=True)
@@ -1402,8 +1419,6 @@ class ComputeRule:
             "87495",
             "87496",
             "87497",
-            "86777",
-            "86778",
         ]
 
         inclusion_column = "ACTIVITY_CODE"
