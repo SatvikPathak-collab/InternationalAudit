@@ -26,7 +26,9 @@ class PreprocessClass:
                 df[col] = pd.to_datetime(df[col], errors="coerce", format=date_format)
             else:
                 missing_columns.append(col)
-        logger.warning(f"Missing datetime columns: {missing_columns}")
+
+        if len(missing_columns) != 0:
+            logger.warning(f"Missing datetime columns: {missing_columns}")
         return df
 
     def __fix_numerical_cols(self, df):
@@ -45,7 +47,9 @@ class PreprocessClass:
                 )
             else:
                 missing_columns.append(col)
-        logger.warning(f"Missing numerical columns: {missing_columns}")
+
+        if len(missing_columns) != 0:
+            logger.warning(f"Missing numerical columns: {missing_columns}")
 
         return df
 
