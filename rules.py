@@ -38,6 +38,8 @@ class ComputeRule:
         self, df: pd.DataFrame, extra_condition: list[dict]
     ) -> pd.Series:
         mask = pd.Series([True] * len(df))
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        approved_mask = df[status_col].apply(lambda x : x.lower() == "approved")
 
         for condition in extra_condition:
             col: str = condition.get("column", "")
@@ -64,14 +66,16 @@ class ComputeRule:
                 else:
                     logger.warning(f"Invalid operation detected: {op}")
                     mask &= False
+
+        mask &= approved_mask
         return mask
 
     def _compute_inclusion_exclusion(
         self,
         df: pd.DataFrame,
         trigger_name: str,
-        inclusion: list[str] | None = None,
-        exclusion: list[str] | None = None,
+        inclusion: list[str] | list[dict] | None = None,
+        exclusion: list[str] | list[dict] | None = None,
         inclusion_column: str | None = None,
         exclusion_column: str | None = None,
         extra_condition: list[dict] | None = None,
@@ -80,19 +84,42 @@ class ComputeRule:
         is_exclusion_absent = pd.Series([True] * len(df))
         is_extra_conditions_present = pd.Series([True] * len(df))
 
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        is_approved = df[status_col].apply(lambda x : x.lower() == "approved")
+
         if inclusion is None and exclusion is None and extra_condition is None:
             raise RuntimeError(
                 "Inclusion, Exclusion and Extra Condition can not be None at the same time."
             )
 
         if inclusion:
-            if inclusion_column not in df.columns:
-                logger.warning(f"{inclusion_column} not present.")
-                return df
+            inclusion_masks = []
 
-            is_inclusion_present = df[inclusion_column].map(
-                lambda x: any(code == x for code in inclusion)
-            )
+            # Old style: list of strings + single column
+            if all(isinstance(i, str) for i in inclusion) and inclusion_column:
+                if inclusion_column not in df.columns:
+                    logger.warning(f"Inclusion column {inclusion_column} not present.")
+                else:
+                    lower_inclusion = [c.lower() for c in inclusion]
+                    mask = df[inclusion_column].map(lambda x: str(x).lower() in lower_inclusion)
+                    inclusion_masks.append(mask)
+
+            # New style: list of dicts
+            elif all(isinstance(i, dict) for i in inclusion):
+                for inc in inclusion:
+                    col = inc.get("column")
+                    codes = inc.get("codes", [])
+                    if col not in df.columns:
+                        logger.warning(f"Inclusion column {col} not present.")
+                        continue
+                    lower_codes = [c.lower() for c in codes]
+                    mask = df[col].map(lambda x: str(x).lower() in lower_codes)
+                    inclusion_masks.append(mask)
+
+            if inclusion_masks:
+                is_inclusion_present = pd.concat(inclusion_masks, axis=1).any(axis=1)
+
+                
         if extra_condition:
             is_extra_conditions_present = self._check_extra_condition(
                 df=df,
@@ -100,19 +127,34 @@ class ComputeRule:
             )
 
         if exclusion:
-            if not exclusion_column:
-                logger.warning("exclusion_column is None but exclusion codes provided")
-                return df
+            exclusion_masks = []
 
-            if exclusion_column not in df.columns:
-                logger.warning(f"{exclusion_column} not present in dataframe")
-                return df
+            # Old style: list of strings + single column
+            if all(isinstance(e, str) for e in exclusion) and exclusion_column:
+                if exclusion_column not in df.columns:
+                    logger.warning(f"Exclusion column {exclusion_column} not present.")
+                else:
+                    lower_exclusion = [c.lower() for c in exclusion]
+                    mask = df[exclusion_column].map(lambda x: str(x).lower() not in lower_exclusion)
+                    exclusion_masks.append(mask)
 
-            is_exclusion_absent = df[exclusion_column].apply(
-                lambda x: all(code != x for code in exclusion)
-            )
+            # New style: list of dicts
+            elif all(isinstance(e, dict) for e in exclusion):
+                for exc in exclusion:
+                    col = exc.get("column")
+                    codes = exc.get("codes", [])
+                    if col not in df.columns:
+                        logger.warning(f"Exclusion column {col} not present.")
+                        continue
+                    lower_codes = [c.lower() for c in codes]
+                    mask = df[col].map(lambda x: str(x).lower() not in lower_codes)
+                    exclusion_masks.append(mask)
+
+            if exclusion_masks:
+                is_exclusion_absent = pd.concat(exclusion_masks, axis=1).all(axis=1)
+
         is_trigger_present = (
-            is_inclusion_present & is_exclusion_absent & is_extra_conditions_present
+            is_inclusion_present & is_exclusion_absent & is_extra_conditions_present & is_approved
         )
         df.loc[is_trigger_present, "Filter Applied"] = df.loc[
             is_trigger_present, "Filter Applied"
@@ -555,12 +597,24 @@ class ComputeRule:
             logger.error("Presenting Complainst not in data.")
             return df
 
-        is_sick_present = (
-            df["PRESENTING_COMPLAINTS"].str.lower().str.contains("sick").fillna(False)
+        keywords = ["sick", "Medical note"]  # add as many as you need
+
+        pattern = "|".join(keywords)
+
+        # Determine which status column to use
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+
+
+        # Check if any of the keywords are present
+        is_trigger_present = (
+            df["PRESENTING_COMPLAINTS"]
+            .str.lower()
+            .str.contains(pattern, na=False) & df[status_col].apply(lambda x : x.lower() == "approved")  # na=False handles missing values
         )
+
         trigger_name = "General exclusion - Sick Leave"
-        df.loc[is_sick_present, "Filter Applied"] = df.loc[
-            is_sick_present, "Filter Applied"
+        df.loc[is_trigger_present, "Filter Applied"] = df.loc[
+            is_trigger_present, "Filter Applied"
         ].apply(lambda x: x + [trigger_name])
         return df
 
@@ -609,6 +663,8 @@ class ComputeRule:
             exclusion_column=exclusion_column,
             extra_condition=extra_conditions,
         )
+
+        df = df.drop(columns = ["AGE_OUTSIDE_24_65"])
         return df
 
     @rule_method(active=True)
@@ -648,16 +704,19 @@ class ComputeRule:
     def betadine_mouth_wash(self, df):
         trigger_name: str = "Betadine Mouth wash"
         inclusion: list[str] = ["0000-000000-001427"]
-        exclusion: list[str] = ["AK/HC/00156/0/1"]
-        exclusion_column: str = "POLICY_NUMBER"
         inclusion_column: str = "ACTIVITY_CODE"
+
+        exclusion : list[dict] = [
+            {"column": "POLICY_NUMBER", "codes": ["AK/HC/00156/0/1"]},
+            {"column": "CORPORATE_NAME", "codes": ["QAFCO", "QATARENERGY"]}
+        ]
+
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
             exclusion=exclusion,
             inclusion_column=inclusion_column,
-            exclusion_column=exclusion_column,
         )
         return df
 
@@ -759,7 +818,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_large_dressing_flag"])
+        df = df.drop(columns = ["_large_dressing_flag"])
         return df
 
     @rule_method(active=True)
@@ -780,7 +839,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_sidra_medical_flag"])
+        df = df.drop(columns = ["_sidra_medical_flag"])
         return df
 
     @rule_method(active=True)
@@ -824,7 +883,7 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_glucosamine_flag"])
+        df = df.drop(columns = ["_glucosamine_flag"])
         return df
 
     @rule_method(active=True)
@@ -837,7 +896,10 @@ class ComputeRule:
             ("85652", "86141"),
         ]
 
-        df["_GROUP_KEY"] = df["PRE_AUTH_NUMBER"].where(df["PRE_AUTH_NUMBER"].notna(), df["CLAIM_NUMBER"])
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
+
+        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
 
         # Group by claim/preauth number
         for claim_id, group in df.groupby("_GROUP_KEY"):
@@ -848,7 +910,8 @@ class ComputeRule:
                 if code1 in activity_codes and code2 in activity_codes:
                     mask = (df["_GROUP_KEY"] == claim_id) & (
                         df["ACTIVITY_CODE"].astype(str).isin([code1, code2])
-                    )
+                    ) & df[status_col].apply(lambda x : x.lower() == "approved")
+
                     df.loc[mask, "Filter Applied"] = df.loc[mask, "Filter Applied"].apply(
                         lambda x: [trigger_name] if not isinstance(x, list) else x + [trigger_name]
                     )
@@ -883,7 +946,7 @@ class ComputeRule:
             extra_condition=extra_conditions
         )
 
-        df.drop(columns = ["_probiotic"])
+        df = df.drop(columns = ["_probiotic"])
         return df
 
     @rule_method(active=True)
@@ -941,7 +1004,7 @@ class ComputeRule:
             extra_condition=extra_conditions
         )
 
-        df.drop(columns = ["_ondansetron"])
+        df = df.drop(columns = ["_ondansetron"])
         return df
 
     @rule_method(active=True)
@@ -1040,8 +1103,13 @@ class ComputeRule:
             "38531",
         ]
         inclusion_column: str = "ACTIVITY_CODE"
+
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        pre_auth_mask = df[pre_auth_col].isna() | ~df["PRESENTING_COMPLAINTS"].str.contains(r'PA\s?111', regex=True, na=False)
+        df["_pre_auth"] = pre_auth_mask
+        
         extra_conditions: list[dict] = [
-            {"column": "PRE_AUTH_NUMBER", "condition": {"notna": True}},
+            {"column": "_pre_auth", "condition": {"eq": True}},
         ]
         df = self._compute_inclusion_exclusion(
             df=df,
@@ -1050,6 +1118,8 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_conditions,
         )
+
+        df = df.drop(columns = ["_pre_auth"])
         return df
 
     @rule_method(active=True)
@@ -1074,12 +1144,13 @@ class ComputeRule:
             if pd.isna(val) or str(val).strip().lower() in {"", "nan"}:
                 return ""
             return str(val).strip()
-    
-        df["PRE_AUTH_NUMBER"] = df["PRE_AUTH_NUMBER"].apply(normalize_id)
+
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        df[pre_auth_col] = df[pre_auth_col].apply(normalize_id)
         df["CLAIM_NUMBER"] = df["CLAIM_NUMBER"].apply(normalize_id)
 
         df["_group_key"] = df.apply(
-            lambda row: (row["PRE_AUTH_NUMBER"] if row["PRE_AUTH_NUMBER"] else row['CLAIM_NUMBER']),
+            lambda row: (row[pre_auth_col] if row[pre_auth_col] else row['CLAIM_NUMBER']),
             axis=1
         )
 
@@ -1121,14 +1192,14 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df.drop(columns = ["_capsaicin_belladona"])
+        df = df.drop(columns = ["_capsaicin_belladona"])
         return df
 
     @rule_method(active=True)
     def heatpad_non_payable(self, df):
         trigger_name: str = "Heat Pad - Not Payable"
 
-        inclusion: list[str] = [
+        inclusion_codes: list[str] = [
             "97010",
             "A9273",
             "E0210",
@@ -1139,13 +1210,17 @@ class ComputeRule:
             "E0490",
             "A4639"
         ]
-        inclusion_column: str = "ACTIVITY_CODE"
+
+        inclusion: list[dict] = [
+            {"column": "ACTIVITY_CODE", "codes": inclusion_codes},
+            {"column": "ACTIVITY_INTERNAL_DESCRIPTION", "codes": ["Heat pad"]},
+            {"column": "ACTIVITY_DESCRIPTION", "codes": ["Heat pad"]},
+        ]
 
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
-            inclusion_column=inclusion_column,
         )
         return df
 
@@ -1153,7 +1228,7 @@ class ComputeRule:
     def steam_inhaler_non_payable(self, df):
         trigger_name: str = "Steam Inhaler - Not Payable"
 
-        inclusion: list[str] = [
+        inclusion_codes: list[str] = [
             "94640",
             "94644",
             "J3535",
@@ -1161,13 +1236,17 @@ class ComputeRule:
             "S8101",
             "A4627"
         ]
-        inclusion_column: str = "ACTIVITY_CODE"
+
+        inclusion : list[dict] = [
+            {"column": "ACTIVITY_CODE", "codes": inclusion_codes},
+            {"column": "ACTIVITY_INTERNAL_DESCRIPTION", "codes": ["Steam Inhaler"]},
+            {"column": "ACTIVITY_DESCRIPTION", "codes": ["Steam Inhaler"]},
+        ]
 
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
-            inclusion_column=inclusion_column,
         )
         return df
 
@@ -1175,18 +1254,22 @@ class ComputeRule:
     def hot_water_bag_non_payable(self, df):
         trigger_name: str = "Hot Water Bag - Not Payable"
 
-        inclusion: list[str] = [
+        inclusion_codes: list[str] = [
             "97010",
             "E0220",
             "A9273"
         ]
-        inclusion_column: str = "ACTIVITY_CODE"
+
+        inclusion : list[dict] = [
+            {"column": "ACTIVITY_CODE", "codes": inclusion_codes},
+            {"column": "ACTIVITY_INTERNAL_DESCRIPTION", "codes": ["Hot Water Bag"]},
+            {"column": "ACTIVITY_DESCRIPTION", "codes": ["Hot Water Bag"]},
+        ]
 
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
-            inclusion_column=inclusion_column,
         )
         return df
 
@@ -1194,16 +1277,20 @@ class ComputeRule:
     def pillows_non_payable(self, df):
         trigger_name: str = "Pillows - Not Payable"
 
-        inclusion: list[str] = [
+        inclusion_codes: list[str] = [
             "E0190"
         ]
-        inclusion_column: str = "ACTIVITY_CODE"
+
+        inclusion : list[dict] = [
+            {"column": "ACTIVITY_CODE", "codes": inclusion_codes},
+            {"column": "ACTIVITY_INTERNAL_DESCRIPTION", "codes": ["Pillows"]},
+            {"column": "ACTIVITY_DESCRIPTION", "codes": ["Pillows"]},
+        ]
 
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
-            inclusion_column=inclusion_column,
         )
         return df
 
@@ -1231,7 +1318,7 @@ class ComputeRule:
     def diapers_non_payable(self, df):
         trigger_name: str = "Diapers - Not Payable"
 
-        inclusion: list[str] = [
+        inclusion_codes: list[str] = [
             "T4543",
             "T4521",
             "T4522",
@@ -1243,13 +1330,17 @@ class ComputeRule:
             "T4539",
             "A4520"
         ]
-        inclusion_column: str = "ACTIVITY_CODE"
+
+        inclusion : list[dict] = [
+            {"column": "ACTIVITY_CODE", "codes": inclusion_codes},
+            {"column": "ACTIVITY_INTERNAL_DESCRIPTION", "codes": ["Diapers"]},
+            {"column": "ACTIVITY_DESCRIPTION", "codes": ["Diapers"]},
+        ]
 
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
-            inclusion_column=inclusion_column,
         )
         return df
 
@@ -1257,15 +1348,215 @@ class ComputeRule:
     def moisturizer_non_payable(self, df):
         trigger_name: str = "Moisturizer - Not Payable"
 
-        inclusion: list[str] = [
+        inclusion_codes: list[str] = [
             "A6250",
         ]
-        inclusion_column: str = "ACTIVITY_CODE"
+
+        inclusion : list[dict] = [
+            {"column": "ACTIVITY_CODE", "codes": inclusion_codes},
+            {"column": "ACTIVITY_INTERNAL_DESCRIPTION", "codes": ["Moisturizer"]},
+            {"column": "ACTIVITY_DESCRIPTION", "codes": ["Moisturizer"]},
+        ]
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+        )
+        return df
+
+    @rule_method(active=True)
+    def al_abdulghani_motors(self, df):
+        trigger_name: str = "AL ABDULGHANI MOTORS - Dental Procedures & Consultation"
+
+        policy_numbers: list[str] = [
+            "AK/HC/00142/3/3A",
+            "AK/HC/00142/3/3A",
+            "AK/HC/00142/3/3"
+        ]
+
+        extra_condition : list[dict] = [
+            {"column": "POLICY_NUMBER", "condition": {"isin": policy_numbers}},
+            {"column": "CORPORATE_NAME", "condition": {"eq": "AL ABDULGHANI MOTORS"}},
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "DENTAL"}},
+        ]
+
+        exclusion : list[str] = [
+            "Dental Asian Town",
+            "Kings Dental Al Khor",
+            "Kings Dental Al Hilal",
+            "Sham Dental",
+            "Green Health Clinic",
+            "Divine Dentalr",
+            "Craft Dental Center",
+            "The Pearl Dermatology and Dental Laser Center – Al Waab Branch",
+            "The Pearl Dermatology and Dental Laser Center – Umm Salal Branch",
+            "The Pearl Dermatology and Dental Laser Center – Al Wakrah Branch",
+            "Elegant Smile Dental Clinic",
+            "Abeer Dental Center Muather",
+            "Kings Dental Al Wakrah",
+            "Fairview Dental Care",
+        ]
+
+        exclusion_column = "PROVIDER_NAME"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=extra_condition,
+            exclusion=exclusion,
+            exclusion_column=exclusion_column
+        )
+        return df
+
+    @rule_method(active=True)
+    def op_maternity_cmv(self, df):
+        trigger_name: str = "OP Maternity - CMV"
+
+        inclusion: list[str] = [
+            "86644",
+            "86645",
+            "87495",
+            "87496",
+            "87497",
+        ]
+
+        inclusion_column = "ACTIVITY_CODE"
+
+        extra_condition : list[dict] = [
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "OUT-PATIENT MATERNITY"}},
+        ]
 
         df = self._compute_inclusion_exclusion(
             df=df,
             trigger_name=trigger_name,
             inclusion=inclusion,
             inclusion_column=inclusion_column,
+            extra_condition=extra_condition,
+        )
+        return df
+
+    @rule_method(active=True)
+    def op_maternity_toxoplasma(self, df):
+        trigger_name: str = "OP Maternity – TOXOPLASMA"
+
+        inclusion: list[str] = [
+            "86777",
+            "86778",
+        ]
+
+        inclusion_column = "ACTIVITY_CODE"
+
+        extra_condition : list[dict] = [
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "OUT-PATIENT MATERNITY"}},
+        ]
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_condition,
+        )
+        return df
+
+    @rule_method(active=True)
+    def op_maternity_qatar_charity(self, df):
+        trigger_name: str = "OP Maternity – Qatar Charity"
+
+        inclusion: list[str] = [
+            "AK/HC/00191/0/3",
+            "AK/HC/00191/1/3"
+        ]
+
+        inclusion_column = "POLICY_NUMBER"
+
+        extra_condition : list[dict] = [
+            {"column": "CORPORATE_NAME", "condition": {"eq": "Qatar Charity"}},
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "OUT-PATIENT MATERNITY"}},
+        ]
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_condition,
+        )
+        return df
+
+    @rule_method(active=True)
+    def op_optical_qatar_charity(self, df):
+        trigger_name: str = "OP Optical – Qatar Charity"
+
+        inclusion: list[str] = [
+            "AK/HC/00191/0/3",
+            "AK/HC/00191/1/3"
+        ]
+
+        inclusion_column = "POLICY_NUMBER"
+
+        extra_condition : list[dict] = [
+            {"column": "CORPORATE_NAME", "condition": {"eq": "Qatar Charity"}},
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "OPTICAL"}},
+        ]
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_condition,
+        )
+        return df
+
+    @rule_method(active=True)
+    def al_jazeera_media_network(self, df):
+        trigger_name: str = "Health Check-Up – Al Jazeera Media Network"
+
+        inclusion: list[str] = [
+            "82306",
+            "82607",
+            "82728",
+            "81000",
+        ]
+
+        inclusion_column = "ACTIVITY_CODE"
+
+        extra_condition : list[dict] = [
+            {"column": "CORPORATE_NAME", "condition": {"eq": "AL JAZEERA MEDIA NETWORK"}},
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "HEALTH CHECK-UP"}},
+        ]
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_condition,
+        )
+        return df
+
+    @rule_method(active=True)
+    def dental_mofa(self, df):
+        trigger_name: str = "Dental – MOFA"
+
+        inclusion: list[str] = [
+            "D2999",
+        ]
+
+        inclusion_column = "ACTIVITY_CODE"
+
+        extra_condition : list[dict] = [
+            {"column": "CORPORATE_NAME", "condition": {"eq": "MINISTRY OF FOREIGN AFFAIRS"}},
+            {"column": "BENEFIT_TYPE", "condition": {"eq": "DENTAL"}},
+        ]   
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_condition,
         )
         return df
