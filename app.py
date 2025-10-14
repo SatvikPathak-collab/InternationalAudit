@@ -11,7 +11,7 @@ from rules import ComputeRule
 
 warnings.filterwarnings("ignore")
 logger.remove()
-# logger.add("log.log", level="DEBUG")
+logger.add("log.log", level="DEBUG")
 logger.add(sys.stderr, level="DEBUG", colorize=True)
 
 
