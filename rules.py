@@ -38,7 +38,7 @@ class ComputeRule:
         self, df: pd.DataFrame, extra_condition: list[dict]
     ) -> pd.Series:
         mask = pd.Series([True] * len(df))
-        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        status_col = "Activity status-Rejected/Approve"
         approved_mask = df[status_col].apply(lambda x : x.lower() == "approved")
 
         for condition in extra_condition:
@@ -84,7 +84,7 @@ class ComputeRule:
         is_exclusion_absent = pd.Series([True] * len(df))
         is_extra_conditions_present = pd.Series([True] * len(df))
 
-        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        status_col = "Activity status-Rejected/Approve"
         is_approved = df[status_col].apply(lambda x : x.lower() == "approved")
 
         if inclusion is None and exclusion is None and extra_condition is None:
@@ -597,13 +597,12 @@ class ComputeRule:
             logger.error("Presenting Complainst not in data.")
             return df
 
-        keywords = ["sick", "Medical note"]  # add as many as you need
+        keywords = ["Sick leave", "Sick note", "Medical note"]  # add as many as you need
 
         pattern = "|".join(keywords)
 
         # Determine which status column to use
-        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
-
+        status_col = "Activity status-Rejected/Approve"
 
         # Check if any of the keywords are present
         is_trigger_present = (
@@ -665,22 +664,6 @@ class ComputeRule:
         )
 
         df = df.drop(columns = ["AGE_OUTSIDE_24_65"])
-        return df
-
-    @rule_method(active=True)
-    def desensitization(self, df):
-        trigger_name: str = "Desensitization"
-        inclusion: list[str] = ["D9910"]
-        extra_conditions: list[dict] = [
-            {"column": "MEMBER_AGE", "condition": {"gt": 18}}
-        ]
-        df = self._compute_inclusion_exclusion(
-            df=df,
-            trigger_name=trigger_name,
-            inclusion=inclusion,
-            inclusion_column="ACTIVITY_CODE",
-            extra_condition=extra_conditions,
-        )
         return df
 
     @rule_method(active=True)
@@ -899,7 +882,7 @@ class ComputeRule:
         pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
         df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
 
-        status_col = "CLAIM_STATUS" if "CLAIM_STATUS" in df.columns else "PA_STATUS"
+        status_col = "Activity status-Rejected/Approve"
 
         # Group by claim/preauth number
         for claim_id, group in df.groupby("_GROUP_KEY"):
@@ -1200,7 +1183,6 @@ class ComputeRule:
         trigger_name: str = "Heat Pad - Not Payable"
 
         inclusion_codes: list[str] = [
-            "97010",
             "A9273",
             "E0210",
             "E0215",
@@ -1255,7 +1237,6 @@ class ComputeRule:
         trigger_name: str = "Hot Water Bag - Not Payable"
 
         inclusion_codes: list[str] = [
-            "97010",
             "E0220",
             "A9273"
         ]
