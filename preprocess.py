@@ -54,6 +54,7 @@ class PreprocessClass:
         return df
 
     def run_preprocess(self, df):
+        df["Filter Applied(Including special providers)"] = df.apply(lambda _: [], axis=1)
         df["Filter Applied"] = df.apply(lambda _: [], axis=1)
         df = self.__fix_datetime_cols(df=df)
         df = self.__fix_numerical_cols(df=df)

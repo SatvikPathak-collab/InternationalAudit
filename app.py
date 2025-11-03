@@ -8,6 +8,7 @@ from loguru import logger
 
 from preprocess import PreprocessClass
 from rules import ComputeRule
+from mapper import excluded_conditions
 
 warnings.filterwarnings("ignore")
 logger.remove()
@@ -26,7 +27,7 @@ def preprocess_run_rules(df: pd.DataFrame) -> pd.DataFrame:
     preprocess_client = PreprocessClass()
     rules_client = ComputeRule()
     preprocessed_data = preprocess_client.run_preprocess(df=df)
-    rules_applied_data = rules_client.apply_all_rules(preprocessed_data)
+    rules_applied_data = rules_client.apply_all_rules(preprocessed_data, excluded_conditions)
     rules_applied_data.reset_index(drop=True, inplace=True)
     return rules_applied_data
 
