@@ -16,7 +16,7 @@ logger.add("log.log", level="DEBUG")
 logger.add(sys.stderr, level="DEBUG", colorize=True)
 
 
-st.set_page_config(page_title="CSV Preprocessor", layout="wide")
+st.set_page_config(page_title="CSV/Excel Preprocessor", layout="wide")
 
 
 # ---- Your custom function ----
@@ -36,7 +36,7 @@ def preprocess_run_rules(df: pd.DataFrame) -> pd.DataFrame:
 st.title("CSV Preprocessor & Rule Runner")
 
 uploaded_file = st.file_uploader(
-    "Upload a CSV file", type=["csv", "xls", "xlsx"], help="Only CSV is supported"
+    "Upload a CSV or Excel file", type=["csv", "xls", "xlsx"], help="Supported formats: CSV, XLS, XLSX"
 )
 
 if uploaded_file is not None:
@@ -44,12 +44,16 @@ if uploaded_file is not None:
     filename = uploaded_file.name
     ext = os.path.splitext(filename)[1].lower()
 
-    if ext in [".xls", ".xlsx"]:
-        st.error("❌ Excel files are not supported. Please upload a CSV file.")
-    elif ext == ".csv":
-        # Read CSV into DataFrame
-        try:
+    try:
+        if ext == ".csv":
             df = pd.read_csv(uploaded_file)
+        elif ext in [".xls", ".xlsx"]:
+            df = pd.read_excel(uploaded_file)
+        else:
+            st.error("❌ Unsupported file type. Please upload CSV or Excel files.")
+            df = None
+
+        if df is not None:
             st.success(f"✅ Successfully uploaded: {filename}")
 
             # Call your processing function
@@ -71,7 +75,5 @@ if uploaded_file is not None:
                 mime="text/csv",
             )
 
-        except Exception as e:
-            st.error(f"Error reading CSV: {e}")
-    else:
-        st.error("❌ Unsupported file type. Please upload a CSV file.")
+    except Exception as e:
+        st.error(f"Error reading file: {e}")

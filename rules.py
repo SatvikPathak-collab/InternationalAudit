@@ -1260,7 +1260,7 @@ class ComputeRule:
         )
         return df
 
-    @rule_method(active=False)
+    @rule_method(active=True)
     def steam_inhaler_non_payable(self, df):
         trigger_name: str = "Steam Inhaler - Not Payable"
 
