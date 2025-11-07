@@ -1,4 +1,11 @@
-excluded_conditions = [
-    {'column': "PROVIDER_NAME", "values": ["AL AHLI HOSPITAL", "AL EMADI OPTICS", "AL EMADI HOSPITAL CLINICS - NORTH", "AL EMADI HOSPITAL"]},
-    {'column': "CORPORATE_NAME", "values": ["MINISTRY OF FOREIGN AFFAIRS"]}
-]
+excluded_conditions = {
+    'PROVIDER_NAME': {
+        "AL AHLI HOSPITAL" : {"consultation", "pharmacy", "investigation"}, 
+        "AL EMADI OPTICS": {"consultation", "investigation"}, 
+        "AL EMADI HOSPITAL CLINICS - NORTH": {"consultation", "investigation"}, 
+        "AL EMADI HOSPITAL": {"consultation", "investigation"}
+    },
+    'CORPORATE_NAME': {
+        "MINISTRY OF FOREIGN AFFAIRS": {"consultation", "pharmacy", "investigation"}
+    }
+}

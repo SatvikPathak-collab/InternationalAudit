@@ -29,12 +29,27 @@ def rule_method(active: bool = True):
 
         wrapper._is_rule_method = True
         wrapper._rule_active = active
+
+        if hasattr(func, "rule_type"):
+            wrapper.rule_type = func.rule_type
+
         return wrapper
 
     return decorator
 
+def rule_type(type: str):
+    """Assign a type to a rule function."""
+    def decorator(func):
+        func.rule_type = type
+        return func
+    return decorator
+
 
 class ComputeRule:
+
+    def __init__(self, excluded_conditions: dict = None):
+        self.excluded_conditions = excluded_conditions
+
     def _check_extra_condition(
         self, df: pd.DataFrame, extra_condition: list[dict]
     ) -> pd.Series:
@@ -182,26 +197,37 @@ class ComputeRule:
     #     df = self.gardenia_large_dressing(df=df)
     #     df = self.sidra_medical_male(df=df)
     #     return df
-    def apply_all_rules(self, df, excluded_conditions = None):
+    def apply_all_rules(self, df: pd.DataFrame):
         for name in dir(self):
             method = getattr(self, name)
             if callable(method) and getattr(method, "_is_rule_method", False):
                 if getattr(method, "_rule_active", True):
                     df = method(df)
 
-        if excluded_conditions is not None:
-            copy_mask = pd.Series(True, index=df.index)
-            for excluded_condition in excluded_conditions:
-                col = excluded_condition['column']
-                values = excluded_condition['values']
-                match_mask = df[col].str.lower().isin([v.lower() for v in values])
-                copy_mask &= ~match_mask
-            df.loc[copy_mask, "Filter Applied"] = df.loc[copy_mask, "Filter Applied(Including special providers)"]
-        else:
-            df["Filter Applied"] = df["Filter Applied(Including special providers)"]
-
         return df
 
+    def check_rule_exclusion(self, df: pd.DataFrame, trigger_name: str, rule_type: str):
+        excluded_conditions = self.excluded_conditions
+        trigger_mask = df['Filter Applied(Including special providers)'].map(lambda x : len(x) > 0 and x[-1] == trigger_name)
+
+        def apply_exclusion(row):
+            to_copy = True
+            for col_name, vals_dict in excluded_conditions.items():
+                for val, types in vals_dict.items():
+                    if row[col_name] == val:
+                        if rule_type in types:
+                            to_copy &= False
+
+            if to_copy:
+                row['Filter Applied'].append(trigger_name)
+
+            return row
+
+        df.loc[trigger_mask] = df.loc[trigger_mask].apply(apply_exclusion, axis = 1)
+        return df
+
+
+    @rule_type("investigation")
     @rule_method(active=True)
     def general_exclusion_hiv(self, df):
         inclusion = ["86689", "86701", "86702"]
@@ -215,8 +241,11 @@ class ComputeRule:
             inclusion_column="ACTIVITY_CODE",
             exclusion_column="BENEFIT_TYPE",
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.general_exclusion_hiv.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def general_exclusion_zirconium_crown(self, df):
         trigger_name = "General exclusion-Zirconium Crown"
@@ -250,8 +279,11 @@ class ComputeRule:
             inclusion_column="ACTIVITY_CODE",
             exclusion_column="POLICY_NUMBER",
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.general_exclusion_zirconium_crown.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def covid(self, df):
         icd_code = [
@@ -281,8 +313,11 @@ class ComputeRule:
             inclusion_column="PRIMARY_ICD_CODE",
             exclusion_column="POLICY_NUMBER",
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.covid.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def hpv_screening(self, df):
         inclusion = ["0096U", "0500T", "0429U", "87623", "87624", "87625", "0354U"]
@@ -294,8 +329,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion_column=inclusion_column,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.hpv_screening.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def alopecia(self, df):
         icd_inclusion = [
@@ -322,8 +360,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion_column="PRIMARY_ICD_CODE",
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.alopecia.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def more_than_one_quantity(self, df):
         inclusion = [
@@ -607,8 +648,11 @@ class ComputeRule:
             inclusion_column="ACTIVITY_CODE",
             extra_condition=extra_conditions,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.more_than_one_quantity.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def sick_leave(self, df):
         if "PRESENTING_COMPLAINTS" not in df.columns:
@@ -633,8 +677,11 @@ class ComputeRule:
         df.loc[is_trigger_present, "Filter Applied(Including special providers)"] = df.loc[
             is_trigger_present, "Filter Applied(Including special providers)"
         ].apply(lambda x: x + [trigger_name])
+
+        df = self.check_rule_exclusion(df, trigger_name, self.sick_leave.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def pap_smear_age_restriction(self, df):
         trigger_name: str = "PAP Smear Age Restriction"
@@ -681,9 +728,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.pap_smear_age_restriction.rule_type)
         df = df.drop(columns = ["AGE_OUTSIDE_24_65"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def zinc_general_exclusion(self, df):
         trigger_name: str = "Zinc-General Exclusion"
@@ -701,8 +750,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_conditions,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.zinc_general_exclusion.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def mouth_wash(self, df):
         trigger_name: str = "Mouth wash"
@@ -727,9 +779,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.mouth_wash.rule_type)
         df = df.drop(columns = ["_mouth_wash_extra_exclusion"])
         return df
 
+    @rule_type("pharmacy")
     @rule_method(active=True)
     def cough_syrup_high_quantity(self, df):
         trigger_name: str = "Cough Syrup-Quantity 2"
@@ -748,9 +802,11 @@ class ComputeRule:
             df=df, trigger_name=trigger_name, extra_condition=extra_conditions
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.cough_syrup_high_quantity.rule_type)
         df = df.drop(columns=["_syrup_flag"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def nasal_syrup_high_quantity(self, df):
         trigger_name: str = "Nasal Spray-Quantity 2"
@@ -775,9 +831,11 @@ class ComputeRule:
             df=df, trigger_name=trigger_name, extra_condition=extra_conditions
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.nasal_syrup_high_quantity.rule_type)
         df = df.drop(columns=["_nasal_spray_flag"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def nebulizer_high_quantity(self, df):
         trigger_name: str = "Nebulizer- Quantity 1"
@@ -802,9 +860,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.nebulizer_high_quantity.rule_type)
         df = df.drop(columns = "_nebulizer")
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def hpyrol_antibody(self, df):
         trigger_name: str = "H-Pylori Antibody not covered"
@@ -816,8 +876,11 @@ class ComputeRule:
             inclusion=inclusion,
             inclusion_column=inclusion_column,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.hpyrol_antibody.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def gardenia_large_dressing(self, df):
         trigger_name: str = "Gardenia-Large Dressing not covered"
@@ -838,9 +901,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.gardenia_large_dressing.rule_type)
         df = df.drop(columns = ["_large_dressing_flag"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def sidra_medical_male(self, df):
         trigger_name: str = "Sidra Medical Male Above 17 Years"
@@ -859,9 +924,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.sidra_medical_male.rule_type)
         df = df.drop(columns = ["_sidra_medical_flag"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def glucosamine_quantity(self, df):
         trigger_name: str = "Quantity more than 2"
@@ -903,9 +970,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.glucosamine_quantity.rule_type)
         df = df.drop(columns = ["_glucosamine_flag"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def apply_crp_esr_rule(self, df):
         trigger_name = "CRP & ESR in Same claim / pre-auth"
@@ -949,9 +1018,12 @@ class ComputeRule:
                     break
                 break  # No need to check other pairs for this claim
         df.drop(columns="_GROUP_KEY", inplace=True)
+
+        df = self.check_rule_exclusion(df, trigger_name, self.apply_crp_esr_rule.rule_type)
         return df
 
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def general_exclusion_probiotic(self, df):
         trigger_name: str = "General Exclusion-Probiotics"
@@ -977,9 +1049,11 @@ class ComputeRule:
             extra_condition=extra_conditions
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.general_exclusion_probiotic.rule_type)
         df = df.drop(columns = ["_probiotic"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def not_payable_ondansetron(self, df):
         trigger_name: str = "Ondansetron - Payable only in Cancer ICDs."
@@ -1041,9 +1115,11 @@ class ComputeRule:
             exclusion=exclusion
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.not_payable_ondansetron.rule_type)
         df = df.drop(columns = ["_ondansetron"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def not_payable_semaglutide(self, df):
         trigger_name: str = "WEGOVY - Not Payable"
@@ -1061,8 +1137,11 @@ class ComputeRule:
             inclusion=inclusion,
             inclusion_column=inclusion_column,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.not_payable_semaglutide.rule_type)
         return df
 
+    @rule_type("pharmacy")
     @rule_method(active=True)
     def diabetic_semaglutide(self, df):
         trigger_name: str = "OZEMPIC - To verify DM history and approve"
@@ -1078,8 +1157,11 @@ class ComputeRule:
             inclusion=inclusion,
             inclusion_column=inclusion_column,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.diabetic_semaglutide.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def biopsy_pa_available(self, df):
         trigger_name: str = "Service not payable without Preauth"
@@ -1156,9 +1238,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.biopsy_pa_available.rule_type)
         df = df.drop(columns = ["_pre_auth"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def beta_hcg_urine_pregnancy(self, df):
         """
@@ -1206,8 +1290,10 @@ class ComputeRule:
 
         df.drop(columns=["_group_key"], inplace=True)
 
+        df = self.check_rule_exclusion(df, trigger_name, self.beta_hcg_urine_pregnancy.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def capsaicin_belladona_non_payable(self, df):
         trigger_name: str = "Capsaicin / Belladona - Not Payable"
@@ -1229,9 +1315,11 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
+        df = self.check_rule_exclusion(df, trigger_name, self.capsaicin_belladona_non_payable.rule_type)
         df = df.drop(columns = ["_capsaicin_belladona"])
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def heatpad_non_payable(self, df):
         trigger_name: str = "Heat Pad - Not Payable"
@@ -1258,8 +1346,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion=inclusion,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.heatpad_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def steam_inhaler_non_payable(self, df):
         trigger_name: str = "Steam Inhaler - Not Payable"
@@ -1283,8 +1374,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion=inclusion,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.steam_inhaler_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def hot_water_bag_non_payable(self, df):
         trigger_name: str = "Hot Water Bag - Not Payable"
@@ -1305,8 +1399,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion=inclusion,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.hot_water_bag_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def pillows_non_payable(self, df):
         trigger_name: str = "Pillows - Not Payable"
@@ -1326,8 +1423,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion=inclusion,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.pillows_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def antiseptics_non_payable(self, df):
         trigger_name: str = "Antispetics - Not Payable"
@@ -1346,8 +1446,11 @@ class ComputeRule:
             inclusion=inclusion,
             inclusion_column=inclusion_column,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.antiseptics_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def diapers_non_payable(self, df):
         trigger_name: str = "Diapers - Not Payable"
@@ -1376,8 +1479,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion=inclusion,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.diapers_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def moisturizer_non_payable(self, df):
         trigger_name: str = "Moisturizer - Not Payable"
@@ -1397,8 +1503,11 @@ class ComputeRule:
             trigger_name=trigger_name,
             inclusion=inclusion,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.moisturizer_non_payable.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def al_abdulghani_motors(self, df):
         trigger_name: str = "AL ABDULGHANI MOTORS - Dental Procedures & Consultation"
@@ -1450,8 +1559,11 @@ class ComputeRule:
             exclusion=exclusion,
             exclusion_column=exclusion_column
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.al_abdulghani_motors.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def op_maternity_cmv(self, df):
         trigger_name: str = "OP Maternity - CMV"
@@ -1477,8 +1589,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_condition,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.op_maternity_cmv.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def op_maternity_toxoplasma(self, df):
         trigger_name: str = "OP Maternity – TOXOPLASMA"
@@ -1501,8 +1616,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_condition,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.op_maternity_toxoplasma.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def op_maternity_qatar_charity(self, df):
         trigger_name: str = "OP Maternity – Qatar Charity"
@@ -1526,8 +1644,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_condition,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.op_maternity_qatar_charity.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def op_optical_qatar_charity(self, df):
         trigger_name: str = "OP Optical – Qatar Charity"
@@ -1551,8 +1672,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_condition,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.op_optical_qatar_charity.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def al_jazeera_media_network(self, df):
         trigger_name: str = "Health Check-Up – Al Jazeera Media Network"
@@ -1578,8 +1702,11 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_condition,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.al_jazeera_media_network.rule_type)
         return df
 
+    @rule_type("investigation")
     @rule_method(active=True)
     def dental_mofa(self, df):
         trigger_name: str = "Dental – MOFA"
@@ -1602,4 +1729,6 @@ class ComputeRule:
             inclusion_column=inclusion_column,
             extra_condition=extra_condition,
         )
+
+        df = self.check_rule_exclusion(df, trigger_name, self.dental_mofa.rule_type)
         return df

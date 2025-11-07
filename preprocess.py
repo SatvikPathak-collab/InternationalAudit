@@ -53,9 +53,20 @@ class PreprocessClass:
 
         return df
 
+    def __fix_nan_columns(self, df):
+        cols = [
+            "Activity status-Rejected/Approve"
+        ]
+
+        for col in cols:
+            df[col] = df[col].fillna("")
+
+        return df
+
     def run_preprocess(self, df):
         df["Filter Applied(Including special providers)"] = df.apply(lambda _: [], axis=1)
         df["Filter Applied"] = df.apply(lambda _: [], axis=1)
         df = self.__fix_datetime_cols(df=df)
         df = self.__fix_numerical_cols(df=df)
+        df = self.__fix_nan_columns(df=df)
         return df

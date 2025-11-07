@@ -19,15 +19,11 @@ logger.add(sys.stderr, level="DEBUG", colorize=True)
 st.set_page_config(page_title="CSV/Excel Preprocessor", layout="wide")
 
 
-# ---- Your custom function ----
-# Replace this with your real function
-def preprocess_run_rules(df: pd.DataFrame) -> pd.DataFrame:
-    # Dummy processing: just return the same DataFrame for now
-    # Replace with your logic
+def preprocess_and_run_rules(df: pd.DataFrame) -> pd.DataFrame:
     preprocess_client = PreprocessClass()
-    rules_client = ComputeRule()
+    rules_client = ComputeRule(excluded_conditions=excluded_conditions)
     preprocessed_data = preprocess_client.run_preprocess(df=df)
-    rules_applied_data = rules_client.apply_all_rules(preprocessed_data, excluded_conditions)
+    rules_applied_data = rules_client.apply_all_rules(preprocessed_data)
     rules_applied_data.reset_index(drop=True, inplace=True)
     return rules_applied_data
 
@@ -58,11 +54,11 @@ if uploaded_file is not None:
 
             # Call your processing function
             with st.spinner("Processing..."):
-                result_df = preprocess_run_rules(df)
+                result_df = preprocess_and_run_rules(df)
 
             # Show result
             st.subheader("📄 Processed Data")
-            st.dataframe(result_df, use_container_width=True)
+            st.dataframe(result_df, width='stretch')
 
             # Prepare for download
             result_csv = result_df.to_csv(index=False).encode("utf-8")
