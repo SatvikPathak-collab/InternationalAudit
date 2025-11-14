@@ -6,9 +6,10 @@ import pandas as pd
 import streamlit as st
 from loguru import logger
 
+from postprocess import PostProcessClass
 from preprocess import PreprocessClass
 from rules import ComputeRule
-from mapper import excluded_conditions
+from mapper import excluded_conditions_preauth, excluded_conditions_claims
 
 warnings.filterwarnings("ignore")
 logger.remove()
@@ -19,13 +20,25 @@ logger.add(sys.stderr, level="DEBUG", colorize=True)
 st.set_page_config(page_title="CSV/Excel Preprocessor", layout="wide")
 
 
-def preprocess_and_run_rules(df: pd.DataFrame) -> pd.DataFrame:
+def preprocess_and_run_rules(df: pd.DataFrame, data_type: str) -> pd.DataFrame:
     preprocess_client = PreprocessClass()
-    rules_client = ComputeRule(excluded_conditions=excluded_conditions)
-    preprocessed_data = preprocess_client.run_preprocess(df=df)
+    post_process_client = PostProcessClass()
+
+    # Selecting excluded conditions mapper based on file type
+    if data_type == "PreAuth":
+        excluded_conditions = excluded_conditions_preauth
+    elif data_type == "Claim":
+        excluded_conditions = excluded_conditions_claims
+    else:
+        logger.info("Invalid file type. Returning original data")
+        return df
+
+    rules_client = ComputeRule(excluded_conditions=excluded_conditions, data_type=data_type)
+    preprocessed_data = preprocess_client.run_preprocess(df=df, excluded_conditions=excluded_conditions)
     rules_applied_data = rules_client.apply_all_rules(preprocessed_data)
-    rules_applied_data.reset_index(drop=True, inplace=True)
-    return rules_applied_data
+    processed_df = post_process_client.postprocess_df(df=rules_applied_data)
+    processed_df.reset_index(drop=True, inplace=True)
+    return processed_df
 
 
 # ---- Streamlit UI ----
@@ -52,24 +65,26 @@ if uploaded_file is not None:
         if df is not None:
             st.success(f"✅ Successfully uploaded: {filename}")
 
-            # Call your processing function
-            with st.spinner("Processing..."):
-                result_df = preprocess_and_run_rules(df)
+            data_type = st.selectbox("Enter file data type: ", ["PreAuth", "Claim"], index=None, placeholder="Select data type")
+            if data_type:
+                # Call your processing function
+                with st.spinner("Processing..."):
+                    result_df = preprocess_and_run_rules(df, data_type)
 
-            # Show result
-            st.subheader("📄 Processed Data")
-            st.dataframe(result_df, width='stretch')
+                # Show result
+                st.subheader("📄 Processed Data")
+                st.dataframe(result_df, width='stretch')
 
-            # Prepare for download
-            result_csv = result_df.to_csv(index=False).encode("utf-8")
-            result_name = f"result_{os.path.splitext(filename)[0]}.csv"
+                # Prepare for download
+                result_csv = result_df.to_csv(index=False).encode("utf-8")
+                result_name = f"result_{os.path.splitext(filename)[0]}.csv"
 
-            st.download_button(
-                label="⬇️ Download Processed CSV",
-                data=result_csv,
-                file_name=result_name,
-                mime="text/csv",
-            )
+                st.download_button(
+                    label="⬇️ Download Processed CSV",
+                    data=result_csv,
+                    file_name=result_name,
+                    mime="text/csv",
+                )
 
     except Exception as e:
         st.error(f"Error reading file: {e}")
