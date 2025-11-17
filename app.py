@@ -40,6 +40,22 @@ def preprocess_and_run_rules(df: pd.DataFrame, data_type: str) -> pd.DataFrame:
     processed_df.reset_index(drop=True, inplace=True)
     return processed_df
 
+def show_processing_summary(processed_df: pd.DataFrame):
+    """Display summary statistics of processed dataframe in Streamlit."""
+
+    st.subheader("📊 Processing Summary")
+
+    total_rows = len(processed_df)
+    triggered_rows = processed_df["Filter Applied(Exclusions not Applied)"].apply(lambda x: len(x) > 0).sum()
+    trigger_rows_excl_applied = processed_df["Filter Applied"].apply(lambda x: len(x) > 0).sum()
+    manual_verification_rows = processed_df["Filter Applied(Manual Verification Required)"].apply(lambda x: len(x) > 0).sum()
+
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Rows", total_rows)
+    col2.metric("Rows with Triggers", triggered_rows)
+    col3.metric("Rows with Triggers(Exclusions Applied)", trigger_rows_excl_applied)
+    col4.metric("Rows requiring Manual Verification", manual_verification_rows)
+
 
 # ---- Streamlit UI ----
 st.title("CSV Preprocessor & Rule Runner")
@@ -65,7 +81,16 @@ if uploaded_file is not None:
         if df is not None:
             st.success(f"✅ Successfully uploaded: {filename}")
 
-            data_type = st.selectbox("Enter file data type: ", ["PreAuth", "Claim"], index=None, placeholder="Select data type")
+            # Preview the uploaded data
+            st.subheader("📄 Preview of Uploaded Data")
+            st.dataframe(df.head(), width='stretch')
+
+            data_type = st.selectbox(
+                "Enter file data type: ",
+                ["PreAuth", "Claim"],
+                index=None,
+                placeholder="Select data type"
+            )
             if data_type:
                 # Call your processing function
                 with st.spinner("Processing..."):
@@ -73,7 +98,10 @@ if uploaded_file is not None:
 
                 # Show result
                 st.subheader("📄 Processed Data")
-                st.dataframe(result_df, width='stretch')
+                st.dataframe(result_df.head(), width='stretch')
+
+                # --- Summary statistics ---
+                show_processing_summary(result_df)
 
                 # Prepare for download
                 result_csv = result_df.to_csv(index=False).encode("utf-8")
@@ -87,4 +115,5 @@ if uploaded_file is not None:
                 )
 
     except Exception as e:
+        logger.error(f"{e}. Execution stopped")
         st.error(f"Error reading file: {e}")

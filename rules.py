@@ -9,6 +9,7 @@ def rule_method(active: bool = True):
     Decorator factory.
     Use as: @rule_method(active=True)  # included
             @rule_method(active=False) # excluded
+    Marks a function as a rule method and safely wraps it.
     """
 
     def decorator(func):
@@ -19,6 +20,7 @@ def rule_method(active: bool = True):
                 return func(*args, **kwargs)
             except Exception as e:
                 logger.error(f"Error in {func.__name__}: {str(e)}")
+                # Return DF unchanged on rule failure
                 df = None
                 if len(args) >= 2:  # method
                     df = args[1]
@@ -29,6 +31,7 @@ def rule_method(active: bool = True):
         wrapper._is_rule_method = True
         wrapper._rule_active = active
 
+        # Preserve metadata added by rule_details
         if hasattr(func, "case_type") and hasattr(func, "rule_scope"):
             wrapper.case_type = func.case_type
             wrapper.rule_scope = func.rule_scope
@@ -38,7 +41,9 @@ def rule_method(active: bool = True):
     return decorator
 
 def rule_details(case_type: str, rule_scope: str, review_req: str = "none"):
-    """Assign a type to a rule function."""
+    """
+    Attaches metadata to a rule: case type, scope, review requirement.
+    """
     def decorator(func):
         func.case_type = case_type
         func.rule_scope = rule_scope
@@ -47,7 +52,9 @@ def rule_details(case_type: str, rule_scope: str, review_req: str = "none"):
     return decorator
 
 class ComputeRule:
-
+    """
+    Base rule engine: evaluates inclusion, exclusion and extra conditions.
+    """
     def __init__(self, data_type: str, excluded_conditions: dict = None):
         self.excluded_conditions = excluded_conditions
         self.data_type = data_type
@@ -55,14 +62,17 @@ class ComputeRule:
     def _check_extra_condition(
         self, df: pd.DataFrame, extra_condition: list[dict]
     ) -> pd.Series:
+        """
+        Build mask for extra conditions (gt, lt, eq, isin, notna etc.).
+        """
         mask = pd.Series([True] * len(df))
-        status_col = "Activity status-Rejected/Approve"
-        approved_mask = df[status_col].str.lower().eq("approved")
+        approved_mask = df["__approved"]
 
         for condition in extra_condition:
             col: str = condition.get("column", "")
             conds: dict = condition.get("condition", {})
             for op, val in conds.items():
+                # Numeric operators
                 if op == "gte" and isinstance(val, (int, float)):
                     mask &= df[col] >= val
                 elif op == "lte" and isinstance(val, (int, float)):
@@ -71,16 +81,24 @@ class ComputeRule:
                     mask &= df[col] > val
                 elif op == "lt" and isinstance(val, (int, float)):
                     mask &= df[col] < val
+                    
+                # Text matching operators
                 elif op == "eq":
                     mask &= df[col].astype(str).str.lower() == str(val).lower()
                 elif op == "neq":
                     mask &= df[col].astype(str).str.lower() != str(val).lower()
+
+                # List membership
                 elif op == "isin" and isinstance(val, list):
                     mask &= df[col].isin(val)
                 elif op == "notin" and isinstance(val, list):
                     mask &= ~df[col].isin(val)
+
+                # Null check
                 elif op == "notna":
                     mask &= df[col].notna()
+                
+                # Invalid operator fallback
                 else:
                     logger.warning(f"Invalid operation detected: {op}")
                     mask &= False
@@ -98,22 +116,28 @@ class ComputeRule:
         exclusion_column: str | None = None,
         extra_condition: list[dict] | None = None,
     ):
+        """
+        Final mask = inclusion AND NOT exclusion AND extra_conditions AND approved.
+        Adds trigger_name to the set column when matched.
+        """
+
+        # Default masks
         is_inclusion_present = pd.Series([True] * len(df))
         is_exclusion_absent = pd.Series([True] * len(df))
         is_extra_conditions_present = pd.Series([True] * len(df))
+        is_approved = df["__approved"]
 
-        status_col = "Activity status-Rejected/Approve"
-        is_approved = df[status_col].str.lower().eq("approved")
-
+        # At least one category must be used
         if inclusion is None and exclusion is None and extra_condition is None:
             raise RuntimeError(
                 "Inclusion, Exclusion and Extra Condition can not be None at the same time."
             )
 
+        # ---------------- Inclusion ----------------
         if inclusion:
             inclusion_masks = []
 
-            # Old style: list of strings + single column
+            # Old style: ["CODE1", "CODE2"] + single inclusion column
             if all(isinstance(i, str) for i in inclusion) and inclusion_column:
                 if inclusion_column not in df.columns:
                     logger.warning(f"Inclusion column {inclusion_column} not present.")
@@ -122,7 +146,7 @@ class ComputeRule:
                     mask = df[inclusion_column].map(lambda x: str(x).lower() in lower_inclusion)
                     inclusion_masks.append(mask)
 
-            # New style: list of dicts
+            # New style: [{"column":..., "codes":[...]}]
             elif all(isinstance(i, dict) for i in inclusion):
                 for inc in inclusion:
                     col = inc.get("column")
@@ -130,24 +154,26 @@ class ComputeRule:
                     if col not in df.columns:
                         logger.warning(f"Inclusion column {col} not present.")
                         continue
-                    lower_codes = [c.lower() for c in codes]
-                    mask = df[col].map(lambda x: str(x).lower() in lower_codes)
+                    lower_codes = {c.lower() for c in codes}
+                    mask = df[col].astype(str).str.lower().isin(lower_codes)
                     inclusion_masks.append(mask)
 
+            # OR logic across all inclusion masks
             if inclusion_masks:
                 is_inclusion_present = pd.concat(inclusion_masks, axis=1).any(axis=1)
 
-                
+        # ---------------- Extra Conditions ----------------
         if extra_condition:
             is_extra_conditions_present = self._check_extra_condition(
                 df=df,
                 extra_condition=extra_condition,
             )
 
+        # ---------------- Exclusion ----------------
         if exclusion:
             exclusion_masks = []
 
-            # Old style: list of strings + single column
+            # Old style: ["CODE1", "CODE2"] + single exclusion column
             if all(isinstance(e, str) for e in exclusion) and exclusion_column:
                 if exclusion_column not in df.columns:
                     logger.warning(f"Exclusion column {exclusion_column} not present.")
@@ -156,7 +182,7 @@ class ComputeRule:
                     mask = df[exclusion_column].map(lambda x: str(x).lower() not in lower_exclusion)
                     exclusion_masks.append(mask)
 
-            # New style: list of dicts
+            # New style: [{"column":..., "codes":[...]}]
             elif all(isinstance(e, dict) for e in exclusion):
                 for exc in exclusion:
                     col = exc.get("column")
@@ -168,16 +194,80 @@ class ComputeRule:
                     mask = df[col].map(lambda x: str(x).lower() not in lower_codes)
                     exclusion_masks.append(mask)
 
+            # AND logic across all exclusion masks
             if exclusion_masks:
                 is_exclusion_absent = pd.concat(exclusion_masks, axis=1).all(axis=1)
 
+        # ---------------- Final apply ----------------
         is_trigger_present = (
             is_inclusion_present & is_exclusion_absent & is_extra_conditions_present & is_approved
         )
-        df.loc[is_trigger_present, "Filter Applied(Including special providers)"] = df.loc[
-            is_trigger_present, "Filter Applied(Including special providers)"
+        # Apply trigger by updating set column
+        df.loc[is_trigger_present, "Filter Applied(Exclusions not Applied)"] = df.loc[
+            is_trigger_present, "Filter Applied(Exclusions not Applied)"
         ].apply(lambda x: x.union({trigger_name}))
+
         logger.success(f"Successfull Run: {trigger_name}")
+        return df
+
+    def _apply_group_pair_rule(
+        self,
+        df: pd.DataFrame,
+        trigger_name: str,
+        pair_list: list[tuple[list[str], list[str]]],
+        code_column: str = "ACTIVITY_CODE",
+    ):
+        """
+        Generic engine to detect code combinations inside the same claim/pre-auth group.
+
+        pair_list format:
+            [
+                ( ["84402"], ["84403"] ),                     # A → B (1-to-1)
+                ( ["31231", "31505"], consultation_codes ),   # multiple A → multiple B
+                ( ["84702", "84703"], ["81025"] )             # many A → single B
+            ]
+
+        Behavior:
+            - Group rows by PRE_AUTH_NUMBER or CLAIM_NUMBER
+            - Only considers APPROVED rows (__approved)
+            - For each group: if ANY A exists AND ANY B exists → trigger
+            - Only marks rows whose code is in A or B (not entire group)
+        """
+
+        # 1. Determine grouping column
+        pre_auth_col = (
+            "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+        )
+        df["_GROUP_KEY"] = df[pre_auth_col].where(
+            df[pre_auth_col].notna(), df["CLAIM_NUMBER"]
+        )
+
+        # 2. Iterate per claim/preauth group
+        for claim_id, group in df.groupby("_GROUP_KEY"):
+            approved_codes = set(group.loc[group["__approved"], code_column].astype(str))
+
+            for A_list, B_list in pair_list:
+                A_set = set(map(str, A_list))
+                B_set = set(map(str, B_list))
+
+                has_A = not approved_codes.isdisjoint(A_set)
+                has_B = not approved_codes.isdisjoint(B_set)
+
+                if has_A and has_B:
+                    # mark only rows belonging to A_set or B_set
+                    mask = (
+                        (df["_GROUP_KEY"] == claim_id)
+                        & df[code_column].astype(str).isin(A_set | B_set)
+                        & df["__approved"]
+                    )
+
+                    df.loc[mask, "Filter Applied(Exclusions not Applied)"] = df.loc[
+                        mask, "Filter Applied(Exclusions not Applied)"
+                    ].apply(lambda x: x.union({trigger_name}))
+
+                    break  # stop checking other pairs in this claim
+
+        df.drop(columns=["_GROUP_KEY"], inplace=True)
         return df
 
     # def apply_all_rules(self, df):
@@ -207,7 +297,6 @@ class ComputeRule:
                     if hasattr(method, "case_type") and method.case_type not in ["preauth", "both"]:
                         continue
                     df = method(df)
-
         return df
 
     def apply_all_rules_claim(self, df: pd.DataFrame):
@@ -218,7 +307,6 @@ class ComputeRule:
                     if hasattr(method, "case_type") and method.case_type not in ["claim", "both"]:
                         continue
                     df = method(df)
-
         return df
 
     def apply_all_rules(self, df: pd.DataFrame):
@@ -231,9 +319,9 @@ class ComputeRule:
             return df
 
     def apply_manual_trigger(self, df: pd.DataFrame, trigger_name: str):
-        trigger_mask = df['Filter Applied(Including special providers)'].map(lambda x : len(x) > 0 and trigger_name in x)
+        trigger_mask = df['Filter Applied(Exclusions not Applied)'].map(lambda x : len(x) > 0 and trigger_name in x)
         mask = trigger_mask & ~df['exclusion_mask']
-        df.loc[mask, 'Filter Applied(Manual Verification)'] = df.loc[mask, 'Filter Applied(Manual Verification)'].apply(lambda x : x.union({trigger_name}))
+        df.loc[mask, 'Filter Applied(Manual Verification Required)'] = df.loc[mask, 'Filter Applied(Manual Verification Required)'].apply(lambda x : x.union({trigger_name}))
 
         return df
 
@@ -344,20 +432,9 @@ class ComputeRule:
     @rule_method(active=True)
     def alopecia(self, df):
         icd_inclusion = [
-            "A51.32",
-            "L63.0",
-            "L63.1",
-            "L64.0",
-            "L64.8",
-            "L64.9",
-            "L65.2",
-            "L66.8",
-            "L66.9",
-            "Q84.0",
-            "L66.12",
-            "L66.81",
-            "L66.89",
-            "L64"
+            "A51.32", "L63.0", "L63.1", "L64.0", "L64.8", "L64.9",
+            "L65.2", "L66.8", "L66.9", "Q84.0", "L66.12", "L66.81",
+            "L66.89", "L64"
         ]
         trigger_name = "General exclusion-ALOPECIA"
         df = self._compute_inclusion_exclusion(
@@ -373,274 +450,36 @@ class ComputeRule:
     @rule_method(active=True)
     def more_than_one_quantity(self, df):
         inclusion = [
-            "99202",
-            "99203",
-            "99204",
-            "99205",
-            "99211",
-            "99212",
-            "99213",
-            "99214",
-            "99215",
-            "99221",
-            "99222",
-            "99223",
-            "99231",
-            "99232",
-            "99233",
-            "99234",
-            "99235",
-            "99236",
-            "99238",
-            "99239",
-            "99242",
-            "99243",
-            "99244",
-            "99245",
-            "99252",
-            "99253",
-            "99254",
-            "99255",
-            "99281",
-            "99282",
-            "99283",
-            "99284",
-            "99285",
-            "99288",
-            "99291",
-            "99292",
-            "99304",
-            "99305",
-            "99306",
-            "99307",
-            "99308",
-            "99309",
-            "99310",
-            "99315",
-            "99316",
-            "99341",
-            "99342",
-            "99344",
-            "99345",
-            "99347",
-            "99348",
-            "99349",
-            "99350",
-            "99358",
-            "99359",
-            "99360",
-            "99366",
-            "99367",
-            "99368",
-            "99374",
-            "99375",
-            "99377",
-            "99378",
-            "99379",
-            "99380",
-            "99381",
-            "99382",
-            "99383",
-            "99384",
-            "99385",
-            "99386",
-            "99387",
-            "99391",
-            "99392",
-            "99393",
-            "99394",
-            "99395",
-            "99396",
-            "99397",
-            "99401",
-            "99402",
-            "99403",
-            "99404",
-            "99406",
-            "99407",
-            "99408",
-            "99409",
-            "99411",
-            "99412",
-            "99429",
-            "99441",
-            "99442",
-            "99443",
-            "99450",
-            "99455",
-            "99456",
-            "99460",
-            "99461",
-            "99462",
-            "99463",
-            "99464",
-            "99465",
-            "99466",
-            "99467",
-            "99468",
-            "99469",
-            "99471",
-            "99472",
-            "99475",
-            "99476",
-            "99477",
-            "99478",
-            "99479",
-            "99480",
-            "99499",
-            "99500",
-            "99501",
-            "99502",
-            "99503",
-            "99504",
-            "99505",
-            "99506",
-            "99507",
-            "99509",
-            "99510",
-            "99511",
-            "99512",
-            "99600",
-            "99601",
-            "99602",
-            "99605",
-            "99606",
-            "99607",
-            "10",
-            "61.08",
-            "D9310",
-            "10.01",
-            "9",
-            "63",
-            "11.01",
-            "11",
-            "99242",
-            "99241",
-            "61.03",
-            "99253",
-            "99243",
-            "10.02",
-            "22",
-            "D0160",
-            "88321",
-            "21",
-            "61.04",
-            "61.01",
-            "61.06",
-            "61.02",
-            "61.07",
-            "61.09",
-            "61.12",
-            "63.01",
-            "63.02",
-            "63.03",
-            "63.04",
-            "63.05",
-            "23",
-            "61.05",
-            "9.01",
-            "9.02",
-            "11.02",
-            "13",
-            "70450",
-            "70460",
-            "70470",
-            "70480",
-            "70481",
-            "70482",
-            "70486",
-            "70487",
-            "70488",
-            "70490",
-            "70491",
-            "70492",
-            "71250",
-            "71260",
-            "71270",
-            "72125",
-            "72126",
-            "72127",
-            "72128",
-            "72129",
-            "72130",
-            "72131",
-            "72132",
-            "72133",
-            "74150",
-            "74160",
-            "74170",
-            "74176",
-            "74177",
-            "74178",
-            "72191",
-            "72192",
-            "72193",
-            "70496",
-            "70498",
-            "71275",
-            "73706",
-            "74174",
-            "70551",
-            "70552",
-            "70553",
-            "70540",
-            "70542",
-            "70543",
-            "72141",
-            "72142",
-            "72156",
-            "72146",
-            "72147",
-            "72157",
-            "72148",
-            "72149",
-            "72158",
-            "73218",
-            "73219",
-            "73220",
-            "73721",
-            "73722",
-            "73723",
-            "74181",
-            "74182",
-            "74183",
-            "72195",
-            "72196",
-            "72197",
-            "75557",
-            "75561",
-            "77046",
-            "77047",
-            "77048",
-            "77049",
-            "71271",
-            "74712",
-            "74713",
-            "75580",
-            "76391",
-            "70544",
-            "70545",
-            "70546",
-            "70547",
-            "70548",
-            "70549",
-            "70554",
-            "72194",
-            "72198",
-            "73700",
-            "73701",
-            "73702",
-            "73718",
-            "73719",
-            "74185",
-            "75559",
-            "75563",
-            "77011",
-            "77012",
-            "77013",
-            "77014",
-            "77021",
-            "77022",
+            "99202", "99203", "99204", "99205", "99211", "99212", "99213", "99214", "99215",
+            "99221", "99222", "99223", "99231", "99232", "99233", "99234", "99235", "99236",
+            "99238", "99239", "99242", "99243", "99244", "99245", "99252", "99253", "99254",
+            "99255", "99281", "99282", "99283", "99284", "99285", "99288", "99291", "99292",
+            "99304", "99305", "99306", "99307", "99308", "99309", "99310", "99315", "99316",
+            "99341", "99342", "99344", "99345", "99347", "99348", "99349", "99350", "99358",
+            "99359", "99360", "99366", "99367", "99368", "99374", "99375", "99377", "99378",
+            "99379", "99380", "99381", "99382", "99383", "99384", "99385", "99386", "99387",
+            "99391", "99392", "99393", "99394", "99395", "99396", "99397", "99401", "99402",
+            "99403", "99404", "99406", "99407", "99408", "99409", "99411", "99412", "99429",
+            "99441", "99442", "99443", "99450", "99455", "99456", "99460", "99461", "99462",
+            "99463", "99464", "99465", "99466", "99467", "99468", "99469", "99471", "99472",
+            "99475", "99476", "99477", "99478", "99479", "99480", "99499", "99500", "99501",
+            "99502", "99503", "99504", "99505", "99506", "99507", "99509", "99510", "99511",
+            "99512", "99600", "99601", "99602", "99605", "99606", "99607", "10", "61.08",
+            "D9310", "10.01", "9", "63", "11.01", "11", "99242", "99241", "61.03", "99253",
+            "99243", "10.02", "22", "D0160", "88321", "21", "61.04", "61.01", "61.06", "61.02",
+            "61.07", "61.09", "61.12", "63.01", "63.02", "63.03", "63.04", "63.05", "23",
+            "61.05", "9.01", "9.02", "11.02", "13",
+            "70450", "70460", "70470", "70480", "70481", "70482", "70486", "70487", "70488",
+            "70490", "70491", "70492", "71250", "71260", "71270", "72125", "72126", "72127",
+            "72128", "72129", "72130", "72131", "72132", "72133", "74150", "74160", "74170",
+            "74176", "74177", "74178", "72191", "72192", "72193", "70496", "70498", "71275",
+            "73706", "74174", "70551", "70552", "70553", "70540", "70542", "70543", "72141",
+            "72142", "72156", "72146", "72147", "72157", "72148", "72149", "72158", "73218",
+            "73219", "73220", "73721", "73722", "73723", "74181", "74182", "74183", "72195",
+            "72196", "72197", "75557", "75561", "77046", "77047", "77048", "77049", "71271",
+            "74712", "74713", "75580", "76391", "70544", "70545", "70546", "70547", "70548",
+            "70549", "70554", "72194", "72198", "73700", "73701", "73702", "73718", "73719",
+            "74185", "75559", "75563", "77011", "77012", "77013", "77014", "77021", "77022",
         ]
         extra_conditions: list[dict] = [
             {"column": "ACTIVITY_QUANTITY_APPROVED", "condition": {"gt": 1}}
@@ -663,25 +502,31 @@ class ComputeRule:
             logger.error("Presenting Complaints not in data.")
             return df
 
-        keywords = ["Sick leave", "Sick note", "Medical note"]  # add as many as you need
+        trigger_name = "General exclusion - Sick Leave"
 
-        pattern = "|".join(keywords)
+        # Normalize keyword search: prepare a single OR-regex string
+        keywords = ["Sick leave", "Sick note", "Medical note"]
+        pattern = "|".join(k.lower() for k in keywords)
 
-        # Determine which status column to use
-        status_col = "Activity status-Rejected/Approve"
+        # Build temporary boolean flag column for matching text
+        temp_col = "_tmp_sick_leave_flag"
 
-        # Check if any of the keywords are present
-        is_trigger_present = (
-            df["PRESENTING_COMPLAINTS"].astype(str)
-            .str.lower()
-            .str.contains(pattern, na=False) & df[status_col].str.lower().eq("approved")  # na=False handles missing values
+        # Flag entries where presenting complaint contains any keyword (case-insensitive)
+        df[temp_col] = df["PRESENTING_COMPLAINTS"].astype(str).str.lower().str.contains(
+            pattern, na=False
         )
 
-        trigger_name = "General exclusion - Sick Leave"
-        df.loc[is_trigger_present, "Filter Applied(Including special providers)"] = df.loc[
-            is_trigger_present, "Filter Applied(Including special providers)"
-        ].apply(lambda x: x.union({trigger_name}))
+        extra_conditions = [
+            {"column": temp_col, "condition": {"eq": True}}
+        ]
 
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=extra_conditions,
+        )
+
+        df = df.drop(columns=[temp_col])
         return df
 
     @rule_details("both", "account specific")
@@ -689,22 +534,9 @@ class ComputeRule:
     def pap_smear_age_restriction(self, df):
         trigger_name: str = "PAP Smear Age Restriction"
         inclusion = [
-            "88141",
-            "88142",
-            "88143",
-            "88147",
-            "88148",
-            "88150",
-            "88152",
-            "88153",
-            "88155",
-            "88164",
-            "88165",
-            "88166",
-            "88167",
-            "88174",
-            "88175",
-            "88177",
+            "88141", "88142", "88143", "88147", "88148", "88150",
+            "88152", "88153", "88155", "88164", "88165", "88166",
+            "88167", "88174", "88175", "88177",
         ]
         exclusion: list[str] = [
             "AL EMADI HOSPITAL",
@@ -713,6 +545,7 @@ class ComputeRule:
         inclusion_column: str = "ACTIVITY_CODE"
         exclusion_column: str = "PROVIDER_NAME"
 
+        # Temporary flag: True if age < 24 or > 65
         df = df.copy()
         df[inclusion_column] = df[inclusion_column].astype(str)
         df["AGE_OUTSIDE_24_65"] = (df["MEMBER_AGE"] < 24) | (df["MEMBER_AGE"] > 65)
@@ -762,14 +595,21 @@ class ComputeRule:
         inclusion: list[str] = ["0000-000000-001427"]
         inclusion_column: str = "ACTIVITY_CODE"
 
-        mask = (df["POLICY_NUMBER"] == "AK/HC/00232/0/1") & (df["CORPORATE_NAME"] == "QATARENERGY LNG")
-        df["_mouth_wash_extra_exclusion"] = "false"
-        df.loc[mask, "_mouth_wash_extra_exclusion"] = "true"
+        # Temporary column for a special extra exclusion scenario
+        temp_col = "_mouth_wash_extra_exclusion"
+        df[temp_col] = "false"
+
+        # Special override: if BOTH policy & corporate match → exclude
+        mask = (
+            (df["POLICY_NUMBER"] == "AK/HC/00232/0/1") &
+            (df["CORPORATE_NAME"] == "QATARENERGY LNG")
+        )
+        df.loc[mask, temp_col] = "true"
 
         exclusion : list[dict] = [
             {"column": "POLICY_NUMBER", "codes": ["AK/HC/00156/0/1"]},
             {"column": "CORPORATE_NAME", "codes": ["QAFCO", "QATARENERGY"]},
-            {"column": "_mouth_wash_extra_exclusion", "codes": ["true"]}
+            {"column": temp_col, "codes": ["true"]}
         ]
 
         df = self._compute_inclusion_exclusion(
@@ -780,15 +620,18 @@ class ComputeRule:
             inclusion_column=inclusion_column,
         )
 
-        df = df.drop(columns = ["_mouth_wash_extra_exclusion"])
+        df = df.drop(columns = [temp_col])
         return df
 
     @rule_details("both", "generic", "manual")
     @rule_method(active=True)
     def cough_syrup_high_quantity(self, df):
         trigger_name: str = "Cough Syrup-Quantity 2"
+
+        # Regex pattern covering brand names and common variants of cough syrups
         cough_pattern = r"(cough syrup|cough syp|koflet|propolsaft|zecuf|toplexil|dextrokuf)"
 
+        # Temporary boolean column marking rows that match cough syrup products
         df["_syrup_flag"] = (
             df["ACTIVITY_INTERNAL_DESCRIPTION"].astype(str).str.contains(cough_pattern, case = False, na = False) |
             df["ACTIVITY_DESCRIPTION"].astype(str).str.contains(cough_pattern, case = False, na = False)
@@ -843,7 +686,11 @@ class ComputeRule:
         inclusion: list[str] = ["94640"]
         inclusion_column: str = "ACTIVITY_CODE"
 
+        # Age-based threshold logic
         age_greater_18_mask = df["MEMBER_AGE"] >= 18
+        # Temporary boolean condition:
+        #   - Adults: quantity > 1
+        #   - Children: quantity > 2
         df["_nebulizer"] = (
             (age_greater_18_mask & (df["ACTIVITY_QUANTITY_APPROVED"] > 1)) | 
             (~age_greater_18_mask & (df["ACTIVITY_QUANTITY_APPROVED"] > 2))
@@ -909,6 +756,7 @@ class ComputeRule:
     def sidra_medical_male(self, df):
         trigger_name: str = "Sidra Medical Male Above 17 Years"
 
+        # Create temporary flag for identifying Sidra Medical provider
         df["_sidra_medical_flag"] = df["PROVIDER_NAME"].astype(str).str.contains(str("sidra medical"), case = False, na = False)
 
         extra_conditions: list[dict] = [
@@ -955,6 +803,7 @@ class ComputeRule:
         ]
         keyword_mask = df["ACTIVITY_INTERNAL_DESCRIPTION"].astype(str).str.contains("|".join(glucosamine_keywords), case = False, na = False)
 
+        # Temporary flag identifying glucosamine products
         df["_glucosamine_flag"] = code_mask | keyword_mask
 
         extra_conditions: list[dict] = [
@@ -974,50 +823,23 @@ class ComputeRule:
     @rule_details("both", "account specific")
     @rule_method(active=True)
     def apply_crp_esr_rule(self, df):
+        """
+        CRP & ESR must both be present in the same claim/pre-auth.
+        Uses the generic group-pair template.
+        """
         trigger_name = "CRP & ESR in Same claim / pre-auth"
-        code_pairs = [
-            ("85651", "86140"),
-            ("85651", "86141"),
-            ("85652", "86140"),
-            ("85652", "86141"),
+
+        # Convert old pair list → template format
+        pair_list = [
+            (["85651", "85652"], ["86140", "86141"])
         ]
 
-        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
-        df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
-
-        status_col = "Activity status-Rejected/Approve"
-
-        # Group by claim/preauth number
-        for claim_id, group in df.groupby("_GROUP_KEY"):
-            group = group.copy()
-
-            # If any pair is fully present in this claim
-            for code1, code2 in code_pairs:
-                code1_approved = (
-                    (group["ACTIVITY_CODE"].astype(str) == code1) & 
-                    (df[status_col].str.lower().eq("approved"))
-                ).any()
-                code2_approved = (
-                    (group["ACTIVITY_CODE"].astype(str) == code2) & 
-                    (df[status_col].str.lower().eq("approved"))
-                ).any()
-
-                if code1_approved and code2_approved:
-                    mask = (
-                        (df["_GROUP_KEY"] == claim_id) & 
-                        (df["ACTIVITY_CODE"].astype(str).isin([code1, code2])) & 
-                        (df[status_col].str.lower().eq("approved"))
-                    )
-
-                    df.loc[mask, "Filter Applied(Including special providers)"] = df.loc[mask, "Filter Applied(Including special providers)"].apply(
-                        lambda x: x.union({trigger_name})
-                    )
-                    break
-                break  # No need to check other pairs for this claim
-        df.drop(columns="_GROUP_KEY", inplace=True)
-
-        return df
-
+        return self._apply_group_pair_rule(
+            df=df,
+            trigger_name=trigger_name,
+            pair_list=pair_list,
+            code_column="ACTIVITY_CODE",
+        )
 
     @rule_details("both", "account specific")
     @rule_method(active=True)
@@ -1033,8 +855,9 @@ class ComputeRule:
         code_mask = df["ACTIVITY_CODE"].isin(code)
 
         probiotic_pattern = r"(PROBIOTIC|ENTEROGERMINA)"
-
         keyword_mask = df["ACTIVITY_INTERNAL_DESCRIPTION"].astype(str).str.contains(probiotic_pattern, case = False, na = False)
+
+        # Temporary flag identifying probiotic rows
         df["_probiotic"] = code_mask | keyword_mask
 
         extra_conditions: list[dict] = [
@@ -1094,6 +917,7 @@ class ComputeRule:
         ]
         keyword_mask = df["ACTIVITY_INTERNAL_DESCRIPTION"].astype(str).str.contains("|".join(keyword), case = False, na = False)
 
+        # Temporary flag for ondansetron detection
         df["_ondansetron"] = code_mask | keyword_mask
 
         extra_conditions: list[dict] = [
@@ -1161,70 +985,37 @@ class ComputeRule:
     @rule_method(active=True)
     def biopsy_pa_available(self, df):
         trigger_name: str = "Service not payable without Preauth"
-        inclusion: list[str] = [
-            "11101",
-            "11102",
-            "11103",
-            "11104",
-            "11105",
-            "11106",
-            "11107",
-            "19081",
-            "19082",
-            "19083",
-            "19084",
-            "19085",
-            "19086",
-            "19100",
-            "19101",
-            "19102",
-            "19103",
-            "47000",
-            "47001",
-            "47100",
-            "32400",
-            "32402",
-            "32405",
-            "32408",
-            "32607",
-            "32608",
-            "32609",
-            "32096",
-            "32097",
-            "32098",
-            "55700",
-            "55705",
-            "55706",
-            "50200",
-            "50205",
-            "43239",
-            "45380",
-            "44389",
-            "20220",
-            "20225",
-            "20240",
-            "20245",
-            "20250",
-            "20251",
-            "38220",
-            "38221",
-            "38222",
-            "38500",
-            "38505",
-            "38510",
-            "38520",
-            "38525",
-            "38530",
-            "38531",
+        inclusion = [
+            "11101","11102","11103","11104","11105","11106","11107",
+            "19081","19082","19083","19084","19085","19086",
+            "19100","19101","19102","19103",
+            "47000","47001","47100",
+            "32400","32402","32405","32408",
+            "32607","32608","32609",
+            "32096","32097","32098",
+            "55700","55705","55706",
+            "50200","50205",
+            "43239","45380","44389",
+            "20220","20225","20240","20245","20250","20251",
+            "38220","38221","38222",
+            "38500","38505","38510","38520","38525","38530","38531",
         ]
         inclusion_column: str = "ACTIVITY_CODE"
 
         pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
-        pre_auth_mask = (df[pre_auth_col].isna() | df[pre_auth_col].astype(str).str.strip().eq("")) & ~df["PRESENTING_COMPLAINTS"].astype(str).str.strip().str.contains(r'PA:?\s*\d+', regex=True, na=False)
-        df["_pre_auth"] = pre_auth_mask
+
+        # Preauth missing condition (no PA in column & no PA mentioned in text)
+        df["_pre_auth_missing"] = (
+            df[pre_auth_col].isna()
+            | df[pre_auth_col].astype(str).str.strip().eq("")
+        ) & (
+            ~df["PRESENTING_COMPLAINTS"]
+                .astype(str)
+                .str.contains(r'PA:?\s*\d+', regex=True, na=False)
+        )
         
         extra_conditions: list[dict] = [
-            {"column": "_pre_auth", "condition": {"eq": True}},
+            {"column": "_pre_auth_missing", "condition": {"eq": True}},
         ]
         df = self._compute_inclusion_exclusion(
             df=df,
@@ -1234,58 +1025,30 @@ class ComputeRule:
             extra_condition=extra_conditions,
         )
 
-        df = df.drop(columns = ["_pre_auth"])
+        df = df.drop(columns = ["_pre_auth_missing"])
         return df
 
     @rule_details("both", "account specific")
     @rule_method(active=True)
     def beta_hcg_urine_pregnancy(self, df):
         """
-        Rule: Return only rows where both Beta HCG and Urine Pregnancy Test
-        are present in the same claim/pre-auth number.
+        Beta HCG + Urine Pregnancy must both be present
+        in the same claim/pre-auth number.
         """
-        trigger_name: str = "Beta HCG + Urine Pregnancy Test"
 
-        # Code pairs to check
-        code_pairs = [
-            ("84702", "81025"),
-            ("84703", "81025"),
-            ("84704", "81025"),
+        trigger_name = "Beta HCG + Urine Pregnancy Test"
+
+        # Old pairs → template structure
+        pair_list = [
+            (["84702", "84703", "84704"], ["81025"])
         ]
 
-        # Ensure ACTIVITY_CODE is string
-        df["ACTIVITY_CODE"] = df["ACTIVITY_CODE"].astype(str)
-
-        def normalize_id(val):
-            if pd.isna(val) or str(val).strip().lower() in {"", "nan"}:
-                return ""
-            return str(val).strip()
-
-        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
-        df[pre_auth_col] = df[pre_auth_col].apply(normalize_id)
-        df["CLAIM_NUMBER"] = df["CLAIM_NUMBER"].apply(normalize_id)
-
-        df["_group_key"] = df.apply(
-            lambda row: (row[pre_auth_col] if row[pre_auth_col] else row['CLAIM_NUMBER']),
-            axis=1
+        return self._apply_group_pair_rule(
+            df=df,
+            trigger_name=trigger_name,
+            pair_list=pair_list,
+            code_column="ACTIVITY_CODE",
         )
-
-        matched_keys = set()
-        for key, group in df.groupby("_group_key"):
-            codes = set(group["ACTIVITY_CODE"])
-            if any(code1 in codes and code2 in codes for code1, code2 in code_pairs):
-                matched_keys.add(key)
-
-        mask = df["_group_key"].isin(matched_keys) & df["ACTIVITY_CODE"].isin(
-            {code for pair in code_pairs for code in pair}
-        )
-        df.loc[mask, "Filter Applied(Including special providers)"] = df.loc[mask, "Filter Applied(Including special providers)"].apply(
-            lambda x: x.union({trigger_name})
-        )
-
-        df.drop(columns=["_group_key"], inplace=True)
-
-        return df
 
     @rule_details("both", "account specific")
     @rule_method(active=True)
@@ -1298,6 +1061,7 @@ class ComputeRule:
         description = ["Capidol patch", "Capsicum Plaster"]
         description_mask = df["ACTIVITY_INTERNAL_DESCRIPTION"].astype(str).str.contains("|".join(description), case = False, na = False)
 
+        # Temporary flag capturing both conditions
         df["_capsaicin_belladona"] = code_mask | description_mask
 
         extra_conditions: list[dict] = [
@@ -1525,6 +1289,7 @@ class ComputeRule:
             "AL ABEER DENTAL CENTRE - MUATHER",
             "SHAM DENTAL",
             "DENTAL ASIAN TOWN",
+            # These may be added later
             # "KINGS DENTAL CENTER - AL HILAL",
             # "KINGS DENTAL CENTER - AL KHOR",
             # "DIVINE DENTAL CLINIC",
@@ -1742,52 +1507,24 @@ class ComputeRule:
     @rule_method(active=True)
     def free_total_testosterone_rule(self, df):
         trigger_name = "Free Testosterone & Total Testosterone in same preauth/claim"
-        code_pairs = [
-            ("84402", "84403"),
+
+        pair_list = [
+            (["84402"], ["84403"])   # Free & Total Testosterone
         ]
 
-        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
-        df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
-
-        status_col = "Activity status-Rejected/Approve"
-
-        # Group by claim/preauth number
-        for claim_id, group in df.groupby("_GROUP_KEY"):
-            group = group.copy()
-
-            # If any pair is fully present in this claim
-            for code1, code2 in code_pairs:
-                code1_approved = (
-                    (group["ACTIVITY_CODE"].astype(str) == code1) & 
-                    (df[status_col].str.lower().eq("approved"))
-                ).any()
-                code2_approved = (
-                    (group["ACTIVITY_CODE"].astype(str) == code2) & 
-                    (df[status_col].str.lower().eq("approved"))
-                ).any()
-
-                if code1_approved and code2_approved:
-                    mask = (
-                        (df["_GROUP_KEY"] == claim_id) & 
-                        (df["ACTIVITY_CODE"].astype(str).isin([code1, code2])) & 
-                        (df[status_col].str.lower().eq("approved"))
-                    )
-
-                    df.loc[mask, "Filter Applied(Including special providers)"] = df.loc[mask, "Filter Applied(Including special providers)"].apply(
-                        lambda x: x.union({trigger_name})
-                    )
-                    break
-                break  # No need to check other pairs for this claim
-        df.drop(columns="_GROUP_KEY", inplace=True)
-
-        return df
+        return self._apply_group_pair_rule(
+            df=df,
+            trigger_name=trigger_name,
+            pair_list=pair_list,
+            code_column="ACTIVITY_CODE",
+        )
 
     @rule_details("both", "account specific")
     @rule_method(active=True)
     def laryngoscopy_nasoendoscopy_rule(self, df):
         trigger_name = "Laryngoscopy and Naso-endoscopy- Consultation in Same claim / pre-auth"
 
-        # Convert to a set → MUCH faster lookups
+        # All acceptable consultation codes (very large list)
         match_codes = {
             '9','9.01','9.02','10','10.01','10.02','11','11.01','11.02','13',
             '21','22','23',
@@ -1820,93 +1557,31 @@ class ComputeRule:
             '99600','99601','99602','99605','99606','99607'
         }
 
-        # Map primary codes to match set
-        code_map = {
-            "31231": match_codes,
-            "31505": match_codes,
-        }
+        # Pairs: procedure codes → consultation codes
+        pair_list = [
+            (["31231", "31505"], list(match_codes))
+        ]
 
-        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
-        df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
-
-        status_col = "Activity status-Rejected/Approve"
-
-        for claim_id, group in df.groupby("_GROUP_KEY"):
-            group = group.copy()
-
-            approved_mask_group = group[status_col].astype(str).str.lower().eq("approved")
-
-            # Convert claim codes into a SET → fast membership check
-            claim_codes = set(group.loc[approved_mask_group, "ACTIVITY_CODE"].astype(str).tolist())
-
-            for code_A, match_set in code_map.items():
-
-                has_A = code_A in claim_codes
-                has_B = not claim_codes.isdisjoint(match_set)   # BEST way to check intersection
-
-                if has_A and has_B:
-                    # Build mask using set union
-                    mask_codes = {code_A} | match_set
-
-                    mask = (
-                        (df["_GROUP_KEY"] == claim_id) &
-                        df["ACTIVITY_CODE"].astype(str).isin(mask_codes) &
-                        df[status_col].astype(str).str.lower().eq("approved")
-                    )
-
-                    df.loc[mask, "Filter Applied(Including special providers)"] = df.loc[
-                        mask, "Filter Applied(Including special providers)"
-                    ].apply(lambda x: x.union({trigger_name}))
-
-                    break
-
-        df.drop(columns="_GROUP_KEY", inplace=True)
-        return df
+        return self._apply_group_pair_rule(
+            df=df,
+            trigger_name=trigger_name,
+            pair_list=pair_list,
+            code_column="ACTIVITY_CODE",
+        )
 
     @rule_details("both", "account specific")
     @rule_method(active=True)
     def troponin_cpkmb_rule(self, df):
         trigger_name = "Troponin and CPK-MB in Same claim / pre-auth"
 
-        # Use a set instead of a list → faster lookup (O(1))
-        match_codes = {
-            '82553', '82550'
-        }
+        # Define the pair: A → B
+        pair_list = [
+            (["84484"], ["82553", "82550"])
+        ]
 
-        # Mapping remains the same, but match_codes is a set
-        code_map = {
-            "84484": match_codes
-        }
-
-        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
-        df["_GROUP_KEY"] = df[pre_auth_col].where(df[pre_auth_col].notna(), df["CLAIM_NUMBER"])
-
-        status_col = "Activity status-Rejected/Approve"
-
-        for claim_id, group in df.groupby("_GROUP_KEY"):
-            group = group.copy()
-
-            approved_mask_group = group[status_col].astype(str).str.lower().eq("approved")
-            claim_codes = set(group.loc[approved_mask_group, "ACTIVITY_CODE"].astype(str).tolist())
-            # ^ also convert claim_codes to a set for fast lookup
-
-            for code_A, match_set in code_map.items():
-
-                has_A = code_A in claim_codes
-                has_B = not claim_codes.isdisjoint(match_set)  # fastest way to check intersection
-
-                if has_A and has_B:
-                    mask = (
-                        (df["_GROUP_KEY"] == claim_id) &
-                        df["ACTIVITY_CODE"].astype(str).isin({code_A} | match_set) &
-                        df[status_col].astype(str).str.lower().eq("approved")
-                    )
-
-                    df.loc[mask, "Filter Applied(Including special providers)"] = df.loc[
-                        mask, "Filter Applied(Including special providers)"
-                    ].apply(lambda x: x.union({trigger_name}))
-
-                    break  # stop checking other mappings for this claim
-
-        df.drop(columns="_GROUP_KEY", inplace=True)
-        return df
+        return self._apply_group_pair_rule(
+            df=df,
+            trigger_name=trigger_name,
+            pair_list=pair_list,
+            code_column="ACTIVITY_CODE",
+        )
