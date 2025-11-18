@@ -16,6 +16,14 @@ class PostProcessClass:
 
         return df
 
+    def remove_manual_rules_filter_applied(self, df: pd.DataFrame):
+        mask = df["Filter Applied(Manual Verification Required)"].apply(lambda x : x != set())
+        df.loc[mask, "Filter Applied"] = df.loc[mask].apply(
+            lambda row : row["Filter Applied"] - row["Filter Applied(Manual Verification Required)"],
+            axis = 1
+        )
+        return df
+
     def __drop_extra_columns(self, df: pd.DataFrame):
         drop_columns = [
             "exclusion_mask",
@@ -29,6 +37,7 @@ class PostProcessClass:
     def postprocess_df(self, df: pd.DataFrame):
         steps = [
             self.add_exclusions,
+            self.remove_manual_rules_filter_applied,
             self.convert_list,
             self.__drop_extra_columns
         ]
