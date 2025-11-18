@@ -65,7 +65,9 @@ class PreprocessClass:
     def __fix_nan_columns(self, df):
         cols = [
             "Activity status-Rejected/Approve",
-            "SERVICE_NAME"
+            "SERVICE_NAME",
+            "PROVIDER_NAME",
+            "CORPORATE_NAME"
         ]
 
         for col in cols:
@@ -80,6 +82,10 @@ class PreprocessClass:
                 for column, condition_dict in conditions.items():
                     for column_val, service_type in condition_dict.items():
                         condition_mask |= (df[column].eq(column_val)) & (df['SERVICE_NAME'].astype(str).str.lower().isin(service_type))
+            elif condition_type == 'not_eq_dict':
+                for column, condition_dict in conditions.items():
+                    for column_val, service_type in condition_dict.items():
+                        condition_mask |= (df[column].eq(column_val)) & ~(df['SERVICE_NAME'].astype(str).str.lower().isin(service_type))
             elif condition_type == 'eq':
                 for column, column_val in conditions.items():
                     condition_mask |= df[column].astype(str).str.lower().isin(column_val)

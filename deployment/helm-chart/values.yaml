@@ -1,0 +1,51 @@
+# Default values for chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+port: 5000
+image:
+  repository: nginx
+  tag: latest
+serviceName: nginx-service
+namespace: default
+label: nginx
+TargetPort: 5000
+containerName: nginx
+containerPort: 5000
+resources: 
+  limits:
+    cpu: 200m
+    memory: 200Mi
+  requests:
+    cpu: 100m
+    memory: 100Mi
+ServicePort: 80
+name: nginx
+podName: nginx
+
+
+APP:
+  PORT: 5500
+  MORGAN_LOG_LEVEL: combined
+  WINSTON_LOG_LEVEL: debug
+  NODE_ENV: dev
+  
+whitelistIp:
+  - 52.172.205.59/32
+  - 52.172.178.185/32
+  - 52.172.185.61/32
+
+# ingress:
+#   enabled: false
+#   annotations: {}
+#     # kubernetes.io/ingress.class: nginx
+#     # kubernetes.io/tls-acme: "true"
+#   hosts:
+#     - host: chart-example.local
+#       paths: []
+#   tls: []
+#   #  - secretName: chart-example-tls
+#   #    hosts:
+#   #      - chart-example.local
+

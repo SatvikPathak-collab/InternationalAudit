@@ -1,8 +1,8 @@
 excluded_conditions_preauth = {
-    'eq_dict': 
+    'not_eq_dict': 
     {
         'CORPORATE_NAME': {
-            "MINISTRY OF FOREIGN AFFAIRS": {"consultation", "pharmacy", "investigation"}
+            "MINISTRY OF FOREIGN AFFAIRS": {"invalid"}
         }
     },
     'eq':
@@ -14,16 +14,16 @@ excluded_conditions_preauth = {
 }
 
 excluded_conditions_claims = {
-    'eq_dict': 
+    'not_eq_dict': 
     {
         'PROVIDER_NAME': {
-            "AL AHLI HOSPITAL" : {"consultation", "pharmacy", "investigation"}, 
-            "AL EMADI OPTICS": {"consultation", "investigation"}, 
-            "AL EMADI HOSPITAL CLINICS - NORTH": {"consultation", "investigation"}, 
-            "AL EMADI HOSPITAL": {"consultation", "investigation"}
+            "AL AHLI HOSPITAL" : {"invalid"}, 
+            "AL EMADI OPTICS": {"pharmacy"}, 
+            "AL EMADI HOSPITAL CLINICS - NORTH": {"pharmacy"}, 
+            "AL EMADI HOSPITAL": {"pharmacy"}
         },
         'CORPORATE_NAME': {
-            "MINISTRY OF FOREIGN AFFAIRS": {"consultation", "pharmacy", "investigation"}
+            "MINISTRY OF FOREIGN AFFAIRS": {"invalid"}
         }
     },
     'eq': 
