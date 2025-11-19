@@ -28,16 +28,16 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: Always
         env:
-        - name: stp_mongo_connection_string
-          value: "{{.Values.releaseName}}-stp-mongo-connection-string@azurekeyvault"
-        - name: stp_mongo_db
-          value: "{{ .Values.APP.MONGO_DB }}"
-        - name: sf_token
-          value: "{{.Values.releaseName}}-sf-data-user-access-token@azurekeyvault"
-        - name: sf_username
-          value: "{{.Values.releaseName}}-sf-data-user-username@azurekeyvault"
-        - name: sf_password
-          value: "{{.Values.releaseName}}-sf-data-user-password@azurekeyvault"
+        # - name: stp_mongo_connection_string
+        #   value: "{{.Values.releaseName}}-stp-mongo-connection-string@azurekeyvault"
+        # - name: stp_mongo_db
+        #   value: "{{ .Values.APP.MONGO_DB }}"
+        # - name: sf_token
+        #   value: "{{.Values.releaseName}}-sf-data-user-access-token@azurekeyvault"
+        # - name: sf_username
+        #   value: "{{.Values.releaseName}}-sf-data-user-username@azurekeyvault"
+        # - name: sf_password
+        #   value: "{{.Values.releaseName}}-sf-data-user-password@azurekeyvault"
 
         resources:
           requests:
