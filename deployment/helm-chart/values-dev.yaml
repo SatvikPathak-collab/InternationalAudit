@@ -5,7 +5,7 @@
 replicaCount: 1
 port: 8000
 image:
-  repository: vidaldevacr.azurecr.io/InternationalAudit
+  repository: vidaldevacr.azurecr.io/internationalaudit
   tag: latest
 
 serviceName: international-audit-streamlit
