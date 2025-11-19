@@ -1,21 +1,15 @@
 FROM python:3.10-slim-bullseye
 
-# Install system packages
-RUN apt-get update && apt-get install -y build-essential
+RUN apt-get update
 
-# Upgrade pip
-RUN pip install --upgrade pip
+RUN pip3 install --upgrade pip
 
-# Copy project files
-COPY . /app
-WORKDIR /app
+COPY . .
 
-# Install dependencies
-RUN pip install -r requirements.txt
+RUN pip install -r ./requirements.txt
 
-# Expose ports
 EXPOSE 8000
+
 EXPOSE 8001
 
-# Run Streamlit
-CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8000"]
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8000"]
