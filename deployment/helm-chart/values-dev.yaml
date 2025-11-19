@@ -56,7 +56,7 @@ resources:
     memory: 1000Mi
 ServicePort: 80
 name: international-audit-streamlit
-podName: international-streamlit
+podName: international-audit-streamlit
 environment: dev
 
 # APP:
