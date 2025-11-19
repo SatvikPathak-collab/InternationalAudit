@@ -1,15 +1,21 @@
 FROM python:3.10-slim-buster
 
-RUN apt-get update
+# Install system packages
+RUN apt-get update && apt-get install -y build-essential
 
-RUN pip3 install --upgrade pip
+# Upgrade pip
+RUN pip install --upgrade pip
 
-COPY . .
+# Copy project files
+COPY . /app
+WORKDIR /app
 
-RUN pip install -r ./requirements.txt
+# Install dependencies
+RUN pip install -r requirements.txt
 
+# Expose ports
 EXPOSE 8000
-
 EXPOSE 8001
 
-CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8000"]
+# Run Streamlit
+CMD ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8000"]
