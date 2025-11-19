@@ -21,19 +21,8 @@ stages:
             inputs:
               containerRegistry: "dev-acr"
               repository: "InternationalAudit"
-              command: "build"
+              command: "buildAndPush"
               Dockerfile: "**/Dockerfile"
-              buildContext: "$(Build.SourcesDirectory)"
-              tags: "$(Build.BuildId)"
-              arguments: "--pull --no-cache"
-
-            # STEP 2: Push image
-          - task: Docker@2
-            displayName: Push image
-            inputs:
-              containerRegistry: "dev-acr"
-              repository: "InternationalAudit"
-              command: "push"
               tags: "$(Build.BuildId)"
   - stage: Deployment
     displayName: Deployment
@@ -42,9 +31,6 @@ stages:
         displayName: Deployment
         pool: build-scaleset
         steps:
-          - script: |
-              helm uninstall faa-international-streamlit -n insightrx-dev || true
-            displayName: "Uninstall old Helm release"
           # - checkout: infra
           #   fetchDepth: 1
           #   persistCredentials: true
