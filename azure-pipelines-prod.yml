@@ -1,0 +1,49 @@
+trigger:
+  - master
+
+resources:
+  - repo: self
+
+# variables:
+#   HEALTH_PROBE: false
+  
+pool: build-scaleset
+
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: Build
+        displayName: Build
+        pool: build-scaleset
+        steps:
+          - task: Docker@2
+            inputs:
+              containerRegistry: "prod-acr"
+              repository: "FAA-International"
+              command: "buildAndPush"
+              Dockerfile: "**/Dockerfile"
+              tags: "$(Build.BuildId)"
+  - stage: Deployment
+    displayName: Deployment
+    jobs:
+      - job: Deployment
+        displayName: Deployment
+        pool: build-scaleset
+        steps:
+          - task: HelmInstaller@0
+            inputs:
+              helmVersionToInstall: "3.1.1"
+
+          - task: HelmDeploy@0
+            inputs:
+              arguments: "--timeout 10m"
+              connectionType: "Kubernetes Service Connection"
+              kubernetesServiceConnection: "vidal-prod-aks"
+              namespace: "insightrx"
+              command: "upgrade"
+              chartType: "FilePath"
+              chartPath: "./deployment/helm-chart"
+              releaseName: "faa-international-streamlit"
+              overrideValues: "image.tag=$(Build.BuildId),releaseName=faa-international-streamlit"
+              valueFile: "./deployment/helm-chart/values-prod.yaml"
