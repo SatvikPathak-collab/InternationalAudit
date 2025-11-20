@@ -58,6 +58,7 @@ def show_processing_summary(processed_df: pd.DataFrame):
 
 
 # ---- Streamlit UI ----
+logger.info("International Audit app running")
 st.title("CSV Preprocessor & Rule Runner")
 
 uploaded_file = st.file_uploader(
@@ -80,6 +81,7 @@ if uploaded_file is not None:
 
         if df is not None:
             st.success(f"✅ Successfully uploaded: {filename}")
+            logger.info("✅ Successfully uploaded: {filename}")
 
             # Preview the uploaded data
             st.subheader("📄 Preview of Uploaded Data")

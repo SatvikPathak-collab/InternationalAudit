@@ -20,7 +20,7 @@ stages:
           - task: Docker@2
             inputs:
               containerRegistry: "prod-acr"
-              repository: "FAA-International"
+              repository: "internationalaudit"
               command: "buildAndPush"
               Dockerfile: "**/Dockerfile"
               tags: "$(Build.BuildId)"
@@ -44,6 +44,6 @@ stages:
               command: "upgrade"
               chartType: "FilePath"
               chartPath: "./deployment/helm-chart"
-              releaseName: "faa-international-streamlit"
-              overrideValues: "image.tag=$(Build.BuildId),releaseName=faa-international-streamlit"
+              releaseName: "international-audit-streamlit"
+              overrideValues: "image.tag=$(Build.BuildId),releaseName=international-audit-streamlit"
               valueFile: "./deployment/helm-chart/values-prod.yaml"
