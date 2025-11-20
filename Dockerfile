@@ -8,6 +8,8 @@ COPY . .
 
 RUN pip install -r ./requirements.txt
 
+ENV STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
+
 EXPOSE 8000
 
 EXPOSE 8001
