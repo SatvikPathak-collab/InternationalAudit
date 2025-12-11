@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10-slim-bullseye
 
 RUN apt-get update
 
@@ -7,6 +7,8 @@ RUN pip3 install --upgrade pip
 COPY . .
 
 RUN pip install -r ./requirements.txt
+
+ENV STREAMLIT_SERVER_FILE_WATCHER_TYPE=none
 
 EXPOSE 80
 

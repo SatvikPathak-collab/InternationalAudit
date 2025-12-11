@@ -5,19 +5,19 @@
 replicaCount: 2
 port: 80
 image:
-  repository: vidalprodacr.azurecr.io/FAA-International
+  repository: vidalprodacr.azurecr.io/internationalaudit
   tag: latest
 
-serviceName: faa-international-streamlit
-releaseName: faa-international-streamlit
+serviceName: international-audit-streamlit
+releaseName: international-audit-streamlit
 
 # KeyvaultName : insightrx-common
 # KeyvaultName_common : insightrx-common
 
 namespace: insightrx
-label: faa-international-streamlit
+label: international-audit-streamlit
 TargetPort: 80
-containerName: faa-international-streamlit
+containerName: international-audit-streamlit
 containerPort: 80
 
 tolerations:  
@@ -44,7 +44,7 @@ affinity:
           - key: app
             operator: In
             values:
-            -  faa-international-streamlit
+            -  international-audit-streamlit
         topologyKey: "kubernetes.io/hostname"
           
 
@@ -56,8 +56,8 @@ resources:
     cpu: 800m
     memory: 1000Mi
 ServicePort: 80
-name: faa-international-streamlit
-podName: international-streamlit
+name: international-audit-streamlit
+podName: international-audit-streamlit
 environment: prod
 
 # APP:
