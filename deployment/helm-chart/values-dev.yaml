@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
-port: 8000
+port: 80
 image:
   repository: vidaldevacr.azurecr.io/InternationalAudit
   tag: latest
@@ -16,9 +16,9 @@ releaseName: international-audit-streamlit
 
 namespace: insightrx-dev
 label: international-audit-streamlit
-TargetPort: 8000
+TargetPort: 80
 containerName: international-audit-streamlit
-containerPort: 8000
+containerPort: 80
 
 tolerations:  
 - effect: NoSchedule

@@ -11,8 +11,8 @@ spec:
      - 20.198.125.237/32
   ports:
     - name: http
-      port: 8000
-      targetPort: 8000
+      port: 80
+      targetPort: 80
     - name: https
       port: 8001
       targetPort: 8001

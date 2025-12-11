@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 2
-port: 8000
+port: 80
 image:
   repository: vidalprodacr.azurecr.io/FAA-International
   tag: latest
@@ -16,9 +16,9 @@ releaseName: faa-international-streamlit
 
 namespace: insightrx
 label: faa-international-streamlit
-TargetPort: 8000
+TargetPort: 80
 containerName: faa-international-streamlit
-containerPort: 8000
+containerPort: 80
 
 tolerations:  
 - effect: NoSchedule

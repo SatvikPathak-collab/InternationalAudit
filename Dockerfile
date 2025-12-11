@@ -8,8 +8,8 @@ COPY . .
 
 RUN pip install -r ./requirements.txt
 
-EXPOSE 8000
+EXPOSE 80
 
 EXPOSE 8001
 
-CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8000"]
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "80"]
