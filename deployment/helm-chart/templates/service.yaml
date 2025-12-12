@@ -14,8 +14,8 @@ spec:
       port: 80
       targetPort: 80
     - name: https
-      port: 8001
-      targetPort: 8001
+      port: 443
+      targetPort: 443
   selector:
     app: international-audit-streamlit
 

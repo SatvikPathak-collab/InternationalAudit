@@ -19,6 +19,7 @@ label: international-audit-streamlit
 TargetPort: 80
 containerName: international-audit-streamlit
 containerPort: 80
+containerPortHttps: 443
 
 tolerations:  
 - effect: NoSchedule
