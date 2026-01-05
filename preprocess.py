@@ -70,6 +70,13 @@ class PreprocessClass:
             "CORPORATE_NAME"
         ]
 
+        if "PRE_AUTH_NUMBER" in df.columns:
+            df["PRE_AUTH_NUMBER"] = (
+                df["PRE_AUTH_NUMBER"]
+                    .replace("-", pd.NA)
+                    .replace("", pd.NA)
+            )
+
         for col in cols:
             df[col] = df[col].fillna("")
 
