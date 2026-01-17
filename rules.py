@@ -505,7 +505,11 @@ class ComputeRule:
         trigger_name = "General exclusion - Sick Leave"
 
         # Normalize keyword search: prepare a single OR-regex string
-        keywords = ["Sick leave", "Sick note", "Medical note"]
+        keywords = [
+            "sick leave","sick note","medical leave","attendance certificate",
+            "medical certificate","fitness certificate","fitness for work",
+            "return to work certificate","leave extension","work excuse"
+        ]
         pattern = "|".join(k.lower() for k in keywords)
 
         # Build temporary boolean flag column for matching text
@@ -1584,4 +1588,195 @@ class ComputeRule:
             trigger_name=trigger_name,
             pair_list=pair_list,
             code_column="ACTIVITY_CODE",
+        )
+
+    @rule_details("both", "generic")
+    @rule_method(active=True)
+    def general_exclusion_gonococcal(self, df):
+        trigger_name = "General exclusion(STD)-Gonococcal infection"
+
+        icd_codes = [
+            "A54.00","A54.01","A54.02","A54.03","A54.09",
+            "A54.1","A54.23","A54.24","A54.29","A54.89","A54.9"
+        ]
+
+        inclusion = [
+            {"column": "PRIMARY_ICD_CODE", "codes": icd_codes},
+            {"column": "SECONDARY_ICD_CODE", "codes": icd_codes},
+        ]
+
+        return self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+        )
+
+    @rule_details("both", "generic")
+    @rule_method(active=True)
+    def general_exclusion_syphilis(self, df):
+        trigger_name = "General exclusion - Syphilis"
+
+        icd_codes = [
+            "A50.06","A50.07","A50.08","A50.09","A50.1","A50.2",
+            "A50.40","A50.49","A50.54","A50.59","A50.6","A50.7",
+            "A50.9","A51.0","A51.1","A51.2","A51.39","A51.5",
+            "A51.9","A52.00","A52.05","A52.09","A52.10","A52.12",
+            "A52.19","A52.2","A52.3","A52.72","A52.73","A52.74",
+            "A52.75","A52.76","A52.77","A52.78","A52.79","A52.8",
+            "A52.9","A53.0","A53.9","A65"
+        ]
+
+        inclusion = [
+            {"column": "PRIMARY_ICD_CODE", "codes": icd_codes},
+            {"column": "SECONDARY_ICD_CODE", "codes": icd_codes},
+        ]
+
+        return self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+        )
+
+    @rule_details("both", "account specific")
+    @rule_method(active=True)
+    def general_exclusion_mounjaro(self, df):
+        trigger_name = "General exclusion-Mounjaro ( Tirzepatide )"
+
+        inclusion = [
+            "0094-935206-1021","0000-000000-003291","0000-000000-003290",
+            "0094-935207-1021","0094-935201-1021","0000-000000-003289",
+            "0094-935202-1021","0000-000000-003294","0094-935204-1021",
+            "0000-000000-003293","0000-000000-003292","0094-935205-1021"
+        ]
+
+        return self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column="ACTIVITY_CODE",
+        )
+
+    @rule_details("both", "account specific")
+    @rule_method(active=True)
+    def weight_loss_glp1_exclusion(self, df):
+        trigger_name = "General exclusion – Weight Loss / GLP-1"
+
+        keywords = [
+            "weight loss","weight management","slimming","obesity",
+            "glp-1","glp1","mounjaro","ozempic","tirzepatide","semaglutide",
+            "weekly injection","dose escalation","dose increase","restart",
+            "maintenance dose","switch to","resume","uptitrate","downtitrate"
+        ]
+
+        pattern = "|".join(keywords)
+        df["_weight_loss_flag"] = (
+            df["PRESENTING_COMPLAINTS"]
+            .astype(str)
+            .str.contains(pattern, case=False, na=False)
+        )
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=[{"column": "_weight_loss_flag", "condition": {"eq": True}}],
+        )
+
+        return df.drop(columns=["_weight_loss_flag"])
+
+    @rule_details("both", "account specific")
+    @rule_method(active=True)
+    def cosmetic_exclusion(self, df):
+        trigger_name = "General exclusion – Cosmetic"
+
+        keywords = [
+            "hair loss","hair fall","alopecia","hirsutism",
+            "cosmetic","aesthetic","skin pigmentation","lipoma"
+        ]
+
+        pattern = "|".join(keywords)
+        df["_cosmetic_flag"] = (
+            df["PRESENTING_COMPLAINTS"]
+            .astype(str)
+            .str.contains(pattern, case=False, na=False)
+        )
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=[{"column": "_cosmetic_flag", "condition": {"eq": True}}],
+        )
+
+        return df.drop(columns=["_cosmetic_flag"])
+
+    @rule_details("both", "account specific")
+    @rule_method(active=True)
+    def infertility_exclusion(self, df):
+        trigger_name = "General Exclusion: In-Fertility"
+
+        keywords = [
+            "infertility","fertility","ivf","iui","trying to conceive",
+            "preconception","semen analysis","erectile dysfunction",
+            "low libido","sexual problem","performance issue"
+        ]
+
+        pattern = "|".join(keywords)
+        df["_infertility_flag"] = (
+            df["PRESENTING_COMPLAINTS"]
+            .astype(str)
+            .str.contains(pattern, case=False, na=False)
+        )
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=[{"column": "_infertility_flag", "condition": {"eq": True}}],
+        )
+
+        return df.drop(columns=["_infertility_flag"])
+
+    @rule_details("both", "account specific")
+    @rule_method(active=True)
+    def physiotherapy_pa_mandatory(self, df):
+        trigger_name = "Physiotherapy- PA Mandatory"
+
+        physio_codes = [
+            "97001","97002","97110","97112","97116","97140","97530",
+            "97535","97035","97014","97010","97750","97760","97761","97799"
+        ]
+
+        pre_auth_col = "PRE_AUTH_NUMBER" if "PRE_AUTH_NUMBER" in df.columns else "PREAUTH_NUMBER"
+
+        df["_physio_flag"] = (
+            df["ACTIVITY_CODE"].isin(physio_codes) &
+            (
+                df[pre_auth_col].isna() |
+                ~df["PRESENTING_COMPLAINTS"]
+                .astype(str)
+                .str.contains(r"PA\d+", regex=True, na=False)
+            )
+        )
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=[{"column": "_physio_flag", "condition": {"eq": True}}],
+        )
+
+        return df.drop(columns=["_physio_flag"])
+
+    @rule_details("both", "account specific")
+    @rule_method(active=True)
+    def silymarin_exclusion(self, df):
+        trigger_name = "General Exclusion: SilyMarin (Legalon Forte)"
+
+        inclusion = [
+            "0645-195501-1451","0000-000000-000587","0000-000000-000588",
+            "0077-195501-1451","0000-000000-004169","0000-000000-004176"
+        ]
+
+        return self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column="ACTIVITY_CODE",
         )
