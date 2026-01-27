@@ -1,0 +1,52 @@
+trigger:
+  - develop
+
+# variables:
+#   HEALTH_PROBE: false
+
+resources:
+  - repo: self
+
+pool: build-scaleset
+
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: Build
+        displayName: Build
+        pool: build-scaleset
+        steps:
+          - task: Docker@2
+            inputs:
+              containerRegistry: "dev-acr"
+              repository: "internationalaudit"
+              command: "buildAndPush"
+              Dockerfile: "**/Dockerfile"
+              tags: "$(Build.BuildId)"
+  - stage: Deployment
+    displayName: Deployment
+    jobs:
+      - job: Deployment
+        displayName: Deployment
+        pool: build-scaleset
+        steps:
+          # - checkout: infra
+          #   fetchDepth: 1
+          #   persistCredentials: true
+
+          - task: HelmInstaller@0
+            inputs:
+              helmVersionToInstall: "3.13.3"
+          - task: HelmDeploy@0
+            inputs:
+              arguments: "--timeout 10m"
+              connectionType: "Kubernetes Service Connection"
+              kubernetesServiceConnection: 'vidal-dev-aks'
+              namespace: 'insightrx-dev'
+              command: "upgrade"
+              chartType: "FilePath"
+              chartPath: "./deployment/helm-chart"
+              releaseName: "international-audit-streamlit"
+              overrideValues: "image.tag=$(Build.BuildId),releaseName=international-audit-streamlit"
+              valueFile: "./deployment/helm-chart/values-dev.yaml"

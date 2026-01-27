@@ -1,0 +1,113 @@
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: "{{ .Values.name }}"
+  namespace: "{{ .Values.namespace }}"
+spec: 
+  selector:
+    matchLabels:
+      app: "{{ .Values.label }}"
+  replicas: {{ .Values.replicaCount }}
+  template: 
+    metadata:
+      name: "{{ .Values.podname }}"
+      namespace: "{{ .Values.namespace }}"
+      labels:
+        app: "{{ .Values.label }}"
+    spec:
+      {{ if .Values.tolerations  }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+      {{ end }}
+      {{ if .Values.affinity  }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}
+      {{ end }}
+      containers:
+      - name: "{{ .Values.containerName }}"
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: Always
+        env:
+        # - name: stp_mongo_connection_string
+        #   value: "{{.Values.releaseName}}-stp-mongo-connection-string@azurekeyvault"
+        # - name: stp_mongo_db
+        #   value: "{{ .Values.APP.MONGO_DB }}"
+        # - name: sf_token
+        #   value: "{{.Values.releaseName}}-sf-data-user-access-token@azurekeyvault"
+        # - name: sf_username
+        #   value: "{{.Values.releaseName}}-sf-data-user-username@azurekeyvault"
+        # - name: sf_password
+        #   value: "{{.Values.releaseName}}-sf-data-user-password@azurekeyvault"
+
+        resources:
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.resources.limits.cpu }}
+            memory: {{ .Values.resources.limits.memory }}
+        ports:
+        - containerPort: {{ .Values.containerPort }}
+        # livenessProbe:
+        #   httpGet:
+        #     path: /health-check
+        #     port: {{ .Values.containerPort }}
+        #   failureThreshold: 5
+        #   timeoutSeconds: 40
+        #   periodSeconds: 180
+        # readinessProbe:
+        #   httpGet:
+        #     path: /health-check
+        #     port: {{ .Values.containerPort }}
+        #   failureThreshold: 5
+        #   timeoutSeconds: 40
+        #   periodSeconds: 180
+        #   initialDelaySeconds: 120
+
+# horizontal pod autoscaling based on environment
+
+{{ if eq .Values.environment "dev" }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: "{{ .Values.name }}-autoscaler" 
+  namespace: "{{ .Values.namespace }}"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1 
+    kind: Deployment 
+    name: "{{ .Values.name }}" 
+  minReplicas: 1
+  maxReplicas: 2
+  metrics: 
+  - type: Resource
+    resource:
+      name: cpu 
+      target:
+        type: Utilization 
+        averageUtilization: 70
+{{end}}          
+
+{{ if eq .Values.environment "prod" }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: "{{ .Values.name }}-autoscaler" 
+  namespace: "{{ .Values.namespace }}"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1 
+    kind: Deployment 
+    name: "{{ .Values.name }}" 
+  minReplicas: 2
+  maxReplicas: 3
+  metrics: 
+  - type: Resource
+    resource:
+      name: cpu 
+      target:
+        type: Utilization 
+        averageUtilization: 70
+{{end}}
