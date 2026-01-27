@@ -1,7 +1,12 @@
 import os
+import sys
 import streamlit as st
 import pandas as pd
 from loguru import logger
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 from src.main import main
 from rules_config_editor import rules_config_editor
