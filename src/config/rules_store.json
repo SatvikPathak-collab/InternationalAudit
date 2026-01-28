@@ -1,0 +1,1825 @@
+{
+  "general_exclusion_hiv": {
+    "trigger_key": "general_exclusion_hiv",
+    "name": "General exclusion - HIV",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "incl_codes": [
+      "86689",
+      "86701",
+      "86702"
+    ],
+    "excl_codes": [
+      "OUT-PATIENT MATERNITY"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "excl_col": "BENEFIT_TYPE"
+  },
+  "general_exclusion_zirconium_crown": {
+    "trigger_key": "general_exclusion_zirconium_crown",
+    "name": "General exclusion-Zirconium Crown",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "manual",
+    "incl_codes": [
+      "D2720",
+      "D2750"
+    ],
+    "excl_codes": [
+      "AK/HC/00093/5/1",
+      "AK/HC/00093/5/2",
+      "AK/HC/00093/5/3",
+      "AK/HC/00093/5/4",
+      "AK/HC/00093/5/5",
+      "AK/HC/00093/5/6",
+      "AK/HC/00093/5/7",
+      "AK/HC/00143/1/1",
+      "AK/HC/00143/0/1",
+      "AK/HC/00143/2/1",
+      "AK/HC/00153/0/1",
+      "AK/HC/00153/1/1",
+      "AK/HC/00093/6/1",
+      "AK/HC/00093/6/2",
+      "AK/HC/00093/6/3",
+      "AK/HC/00093/6/4",
+      "AK/HC/00093/6/5",
+      "AK/HC/00093/6/6",
+      "AK/HC/00093/6/8"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "excl_col": "POLICY_NUMBER"
+  },
+  "covid": {
+    "trigger_key": "covid",
+    "name": "General exclusion-COVID",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "incl_codes": [
+      "U07.1",
+      "U09.9",
+      "Z11.52",
+      "Z20.822",
+      "Z28.310",
+      "Z28.311",
+      "Z86.16"
+    ],
+    "excl_codes": [
+      "AK/HC/00093/5/1",
+      "AK/HC/00093/5/2",
+      "AK/HC/00093/5/3",
+      "AK/HC/00093/5/4",
+      "AK/HC/00093/5/5",
+      "AK/HC/00093/5/6",
+      "AK/HC/00093/5/7"
+    ],
+    "incl_col": "PRIMARY_ICD_CODE",
+    "excl_col": "POLICY_NUMBER"
+  },
+  "hpv_screening": {
+    "trigger_key": "hpv_screening",
+    "name": "General exclusion-HPV SCREENING",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "0096U",
+      "0500T",
+      "0429U",
+      "87623",
+      "87624",
+      "87625",
+      "0354U"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  },
+  "alopecia": {
+    "trigger_key": "alopecia",
+    "name": "General exclusion-ALOPECIA",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "incl_codes": [
+      "A51.32",
+      "L63.0",
+      "L63.1",
+      "L64.0",
+      "L64.8",
+      "L64.9",
+      "L65.2",
+      "L66.8",
+      "L66.9",
+      "Q84.0",
+      "L66.12",
+      "L66.81",
+      "L66.89",
+      "L64"
+    ],
+    "incl_col": "PRIMARY_ICD_CODE"
+  },
+  "more_than_one_quantity": {
+    "trigger_key": "more_than_one_quantity",
+    "name": "Quantity More Than 1",
+    "active": false,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "incl_codes": [
+      "99202",
+      "99203",
+      "99204",
+      "99205",
+      "99211",
+      "99212",
+      "99213",
+      "99214",
+      "99215",
+      "99221",
+      "99222",
+      "99223",
+      "99231",
+      "99232",
+      "99233",
+      "99234",
+      "99235",
+      "99236",
+      "99238",
+      "99239",
+      "99242",
+      "99243",
+      "99244",
+      "99245",
+      "99252",
+      "99253",
+      "99254",
+      "99255",
+      "99281",
+      "99282",
+      "99283",
+      "99284",
+      "99285",
+      "99288",
+      "99291",
+      "99292",
+      "99304",
+      "99305",
+      "99306",
+      "99307",
+      "99308",
+      "99309",
+      "99310",
+      "99315",
+      "99316",
+      "99341",
+      "99342",
+      "99344",
+      "99345",
+      "99347",
+      "99348",
+      "99349",
+      "99350",
+      "99358",
+      "99359",
+      "99360",
+      "99366",
+      "99367",
+      "99368",
+      "99374",
+      "99375",
+      "99377",
+      "99378",
+      "99379",
+      "99380",
+      "99381",
+      "99382",
+      "99383",
+      "99384",
+      "99385",
+      "99386",
+      "99387",
+      "99391",
+      "99392",
+      "99393",
+      "99394",
+      "99395",
+      "99396",
+      "99397",
+      "99401",
+      "99402",
+      "99403",
+      "99404",
+      "99406",
+      "99407",
+      "99408",
+      "99409",
+      "99411",
+      "99412",
+      "99429",
+      "99441",
+      "99442",
+      "99443",
+      "99450",
+      "99455",
+      "99456",
+      "99460",
+      "99461",
+      "99462",
+      "99463",
+      "99464",
+      "99465",
+      "99466",
+      "99467",
+      "99468",
+      "99469",
+      "99471",
+      "99472",
+      "99475",
+      "99476",
+      "99477",
+      "99478",
+      "99479",
+      "99480",
+      "99499",
+      "99500",
+      "99501",
+      "99502",
+      "99503",
+      "99504",
+      "99505",
+      "99506",
+      "99507",
+      "99509",
+      "99510",
+      "99511",
+      "99512",
+      "99600",
+      "99601",
+      "99602",
+      "99605",
+      "99606",
+      "99607",
+      "10",
+      "61.08",
+      "D9310",
+      "10.01",
+      "9",
+      "63",
+      "11.01",
+      "11",
+      "61.03",
+      "10.02",
+      "22",
+      "D0160",
+      "88321",
+      "21",
+      "61.04",
+      "61.01",
+      "61.06",
+      "61.02",
+      "61.07",
+      "61.09",
+      "61.12",
+      "63.01",
+      "63.02",
+      "63.03",
+      "63.04",
+      "63.05",
+      "23",
+      "61.05",
+      "9.01",
+      "9.02",
+      "11.02",
+      "13",
+      "70450",
+      "70460",
+      "70470",
+      "70480",
+      "70481",
+      "70482",
+      "70486",
+      "70487",
+      "70488",
+      "70490",
+      "70491",
+      "70492",
+      "71250",
+      "71260",
+      "71270",
+      "72125",
+      "72126",
+      "72127",
+      "72128",
+      "72129",
+      "72130",
+      "72131",
+      "72132",
+      "72133",
+      "74150",
+      "74160",
+      "74170",
+      "74176",
+      "74177",
+      "74178",
+      "72191",
+      "72192",
+      "72193",
+      "70496",
+      "70498",
+      "71275",
+      "73706",
+      "74174",
+      "70551",
+      "70552",
+      "70553",
+      "70540",
+      "70542",
+      "70543",
+      "72141",
+      "72142",
+      "72156",
+      "72146",
+      "72147",
+      "72157",
+      "72148",
+      "72149",
+      "72158",
+      "73218",
+      "73219",
+      "73220",
+      "73721",
+      "73722",
+      "73723",
+      "74181",
+      "74182",
+      "74183",
+      "72195",
+      "72196",
+      "72197",
+      "75557",
+      "75561",
+      "77046",
+      "77047",
+      "77048",
+      "77049",
+      "71271",
+      "74712",
+      "74713",
+      "75580",
+      "76391",
+      "70544",
+      "70545",
+      "70546",
+      "70547",
+      "70548",
+      "70549",
+      "70554",
+      "72194",
+      "72198",
+      "73700",
+      "73701",
+      "73702",
+      "73718",
+      "73719",
+      "74185",
+      "75559",
+      "75563",
+      "77011",
+      "77012",
+      "77013",
+      "77014",
+      "77021",
+      "77022"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "extra_conditions": [
+      {
+        "column": "ACTIVITY_QUANTITY_APPROVED",
+        "condition": {
+          "gt": 1
+        }
+      }
+    ]
+  },
+  "sick_leave": {
+    "trigger_key": "sick_leave",
+    "name": "General exclusion - Sick Leave",
+    "active": false,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "text_column": "PRESENTING_COMPLAINTS",
+    "keywords": [
+      "sick leave",
+      "sick note",
+      "medical leave",
+      "attendance certificate",
+      "medical certificate",
+      "fitness certificate",
+      "fitness for work",
+      "return to work certificate",
+      "leave extension",
+      "work excuse"
+    ]
+  },
+  "pap_smear_age_restriction": {
+    "trigger_key": "pap_smear_age_restriction",
+    "name": "PAP Smear Age Restriction",
+    "active": false,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "88141",
+      "88142",
+      "88143",
+      "88147",
+      "88148",
+      "88150",
+      "88152",
+      "88153",
+      "88155",
+      "88164",
+      "88165",
+      "88166",
+      "88167",
+      "88174",
+      "88175",
+      "88177"
+    ],
+    "excl_codes": [
+      "AL EMADI HOSPITAL",
+      "AL EMADI HOSPITAL CLINICS - NORTH"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "excl_col": "PROVIDER_NAME",
+    "age_rule": {
+      "column": "MEMBER_AGE",
+      "min": 24,
+      "max": 65,
+      "outside": true
+    }
+  },
+  "zinc_general_exclusion": {
+    "trigger_key": "zinc_general_exclusion",
+    "name": "Zinc-General Exclusion",
+    "active": false,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "84630"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "extra_conditions": [
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "OUT-PATIENT"
+        }
+      }
+    ]
+  },
+  "mouth_wash": {
+    "trigger_key": "mouth_wash",
+    "name": "Mouth wash",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "0000-000000-001427"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "exclusions": [
+      {
+        "column": "POLICY_NUMBER",
+        "codes": [
+          "AK/HC/00156/0/1"
+        ]
+      },
+      {
+        "column": "CORPORATE_NAME",
+        "codes": [
+          "QAFCO",
+          "QATARENERGY"
+        ]
+      }
+    ],
+    "compound_exclusion": {
+      "conditions": [
+        {
+          "column": "POLICY_NUMBER",
+          "eq": "AK/HC/00232/0/1"
+        },
+        {
+          "column": "CORPORATE_NAME",
+          "eq": "QATARENERGY LNG"
+        }
+      ]
+    }
+  },
+  "cough_syrup_high_quantity": {
+    "trigger_key": "cough_syrup_high_quantity",
+    "name": "Cough Syrup-Quantity 2",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "manual",
+    "text_match": {
+      "columns": [
+        "ACTIVITY_INTERNAL_DESCRIPTION",
+        "ACTIVITY_DESCRIPTION"
+      ],
+      "pattern": "(cough syrup|cough syp|koflet|propolsaft|zecuf|toplexil|dextrokuf)"
+    },
+    "quantity_rule": {
+      "column": "ACTIVITY_QUANTITY_APPROVED",
+      "gt": 2
+    }
+  },
+  "nasal_syrup_high_quantity": {
+    "trigger_key": "nasal_syrup_high_quantity",
+    "name": "Nasal Spray-Quantity 2",
+    "active": true,
+    "case_type": "both",
+    "scope": "universal",
+    "review_req": "manual",
+    "text_match": {
+      "columns": [
+        "ACTIVITY_INTERNAL_DESCRIPTION",
+        "ACTIVITY_DESCRIPTION"
+      ],
+      "contains_all": [
+        "nasal",
+        "spray"
+      ]
+    },
+    "quantity_rule": {
+      "column": "ACTIVITY_QUANTITY_APPROVED",
+      "gt": 2
+    }
+  },
+  "nebulizer_high_quantity": {
+    "trigger_key": "nebulizer_high_quantity",
+    "name": "Nebulizer- Quantity 1",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "manual",
+    "incl_codes": [
+      "94640"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "age_quantity_rule": {
+      "age_column": "MEMBER_AGE",
+      "adult_age": 18,
+      "adult_qty_gt": 1,
+      "child_qty_gt": 2
+    }
+  },
+  "hpyrol_antibody": {
+    "trigger_key": "hpyrol_antibody",
+    "name": "H-Pylori Antibody not covered",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "86677"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  },
+  "gardenia_large_dressing": {
+    "trigger_key": "gardenia_large_dressing",
+    "name": "Gardenia-Large Dressing not covered",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "text_match": {
+      "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+      "pattern": "dressing large"
+    },
+    "provider_condition": {
+      "column": "PROVIDER_NAME",
+      "eq": "GARDENIA MEDICAL CENTER"
+    }
+  },
+  "sidra_medical_male": {
+    "trigger_key": "sidra_medical_male",
+    "name": "Sidra Medical Male Above 17 Years",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "provider_match": {
+      "column": "PROVIDER_NAME",
+      "pattern": "sidra medical"
+    },
+    "gender_rule": {
+      "column": "GENDER",
+      "eq": "Male"
+    },
+    "age_rule": {
+      "column": "MEMBER_AGE",
+      "gt": 17
+    }
+  },
+  "glucosamine_quantity": {
+    "trigger_key": "glucosamine_quantity",
+    "name": "Quantity more than 2",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "code_match": {
+      "column": "ACTIVITY_CODE",
+      "codes": [
+        "0000-000000-003857",
+        "0000-000000-001538",
+        "0000-000000-000937",
+        "0000-000000-001516",
+        "0000-000000-002250",
+        "1000-475401-0391",
+        "1553-529901-0061",
+        "0000-000000-003700",
+        "0000-000000-001528",
+        "0000-000000-002628",
+        "0000-000000-003843"
+      ]
+    },
+    "keyword_match": {
+      "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+      "keywords": [
+        "JOINT PLUS",
+        "JOINTPLAN",
+        "JOINT PLAN",
+        "GLUCOSAMINE",
+        "HEALTH WISE JOINT PLUS",
+        "HEALTHWISE JOINT PLUS"
+      ]
+    },
+    "quantity_rule": {
+      "column": "ACTIVITY_QUANTITY_APPROVED",
+      "gt": 2
+    }
+  },
+  "crp_esr_pair_rule": {
+    "trigger_key": "crp_esr_pair_rule",
+    "name": "CRP & ESR in Same claim / pre-auth",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "pair_rule": {
+      "code_column": "ACTIVITY_CODE",
+      "pairs": [
+        {
+          "A": [
+            "85651",
+            "85652"
+          ],
+          "B": [
+            "86140",
+            "86141"
+          ]
+        }
+      ]
+    }
+  },
+  "general_exclusion_probiotic": {
+    "trigger_key": "general_exclusion_probiotic",
+    "name": "General Exclusion-Probiotics",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "code_match": {
+      "column": "ACTIVITY_CODE",
+      "codes": [
+        "0000-000000-000683",
+        "0000-000000-001315",
+        "2845-133702-2401-B",
+        "0170-502203-4021",
+        "0000-000000-000682"
+      ]
+    },
+    "keyword_match": {
+      "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+      "pattern": "(PROBIOTIC|ENTEROGERMINA)"
+    }
+  },
+  "not_payable_ondansetron": {
+    "trigger_key": "not_payable_ondansetron",
+    "name": "Ondansetron - Payable only in Cancer ICDs.",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "code_match": {
+      "column": "ACTIVITY_CODE",
+      "codes": [
+        "0000-000000-003766",
+        "0000-000000-002029",
+        "0000-000000-003721",
+        "0000-000000-002030",
+        "0000-000000-003394",
+        "0000-000000-003395",
+        "0000-000000-003209",
+        "0000-000000-003211",
+        "0000-000000-003210",
+        "0000-000000-003212",
+        "6639-627604-1161",
+        "0000-000000-001584",
+        "0000-000000-001586",
+        "0006-238802-1172-1",
+        "0006-238802-1172-2",
+        "0006-238803-1171",
+        "0006-238803-1171-A",
+        "0063-238801-0511",
+        "0006-238804-2481",
+        "0006-238802-1173",
+        "0050-238802-1171",
+        "0063-238801-0511-A"
+      ]
+    },
+    "keyword_match": {
+      "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+      "keywords": [
+        "Ondansetron",
+        "zofran",
+        "Vomiran",
+        "Vominor",
+        "Vomet",
+        "Ondavell",
+        "Ondan",
+        "Kromafina",
+        "Zoron",
+        "Emeset"
+      ]
+    },
+    "exclusions": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "0205-229501-1171"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "VOMINORE"
+        ]
+      }
+    ]
+  },
+  "not_payable_semaglutide": {
+    "trigger_key": "not_payable_semaglutide",
+    "name": "WEGOVY - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "manual",
+    "incl_codes": [
+      "0000-000000-003378",
+      "0000-000000-003379",
+      "0000-000000-003380",
+      "0000-000000-003423",
+      "0000-000000-003381"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  },
+  "diabetic_semaglutide": {
+    "trigger_key": "diabetic_semaglutide",
+    "name": "OZEMPIC - To verify DM history and approve",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "manual",
+    "incl_codes": [
+      "4788-782701-1021",
+      "4788-782701-1023",
+      "4788-782701-1025"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  },
+  "biopsy_pa_available": {
+    "trigger_key": "biopsy_pa_available",
+    "name": "Service not payable without Preauth",
+    "active": true,
+    "case_type": "claim",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "11101",
+      "11102",
+      "11103",
+      "11104",
+      "11105",
+      "11106",
+      "11107",
+      "19081",
+      "19082",
+      "19083",
+      "19084",
+      "19085",
+      "19086",
+      "19100",
+      "19101",
+      "19102",
+      "19103",
+      "47000",
+      "47001",
+      "47100",
+      "32400",
+      "32402",
+      "32405",
+      "32408",
+      "32607",
+      "32608",
+      "32609",
+      "32096",
+      "32097",
+      "32098",
+      "55700",
+      "55705",
+      "55706",
+      "50200",
+      "50205",
+      "43239",
+      "45380",
+      "44389",
+      "20220",
+      "20225",
+      "20240",
+      "20245",
+      "20250",
+      "20251",
+      "38220",
+      "38221",
+      "38222",
+      "38500",
+      "38505",
+      "38510",
+      "38520",
+      "38525",
+      "38530",
+      "38531"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "preauth_rule": {
+      "preauth_columns": [
+        "PRE_AUTH_NUMBER",
+        "PREAUTH_NUMBER"
+      ],
+      "complaint_column": "PRESENTING_COMPLAINTS",
+      "regex": "PA:?\\s*\\d+"
+    }
+  },
+  "beta_hcg_urine_pregnancy": {
+    "trigger_key": "beta_hcg_urine_pregnancy",
+    "name": "Beta HCG + Urine Pregnancy Test",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "pair_rule": {
+      "code_column": "ACTIVITY_CODE",
+      "pairs": [
+        {
+          "A": [
+            "84702",
+            "84703",
+            "84704"
+          ],
+          "B": [
+            "81025"
+          ]
+        }
+      ]
+    }
+  },
+  "capsaicin_belladona_non_payable": {
+    "trigger_key": "capsaicin_belladona_non_payable",
+    "name": "Capsaicin / Belladona - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "code_match": {
+      "column": "ACTIVITY_CODE",
+      "codes": [
+        "C9268",
+        "J7335",
+        "J7336"
+      ]
+    },
+    "keyword_match": {
+      "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+      "keywords": [
+        "Capidol patch",
+        "Capsicum Plaster"
+      ]
+    }
+  },
+  "heatpad_non_payable": {
+    "trigger_key": "heatpad_non_payable",
+    "name": "Heat Pad - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "inclusion": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "A9273",
+          "E0210",
+          "E0215",
+          "E0217",
+          "E0221",
+          "E0238",
+          "E0490",
+          "A4639"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "Heat pad"
+        ]
+      },
+      {
+        "column": "ACTIVITY_DESCRIPTION",
+        "codes": [
+          "Heat pad"
+        ]
+      }
+    ]
+  },
+  "steam_inhaler_non_payable": {
+    "trigger_key": "steam_inhaler_non_payable",
+    "name": "Steam Inhaler - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "inclusion": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "94644",
+          "J3535",
+          "S8100",
+          "S8101",
+          "A4627"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "Steam Inhaler"
+        ]
+      },
+      {
+        "column": "ACTIVITY_DESCRIPTION",
+        "codes": [
+          "Steam Inhaler"
+        ]
+      }
+    ]
+  },
+  "hot_water_bag_non_payable": {
+    "trigger_key": "hot_water_bag_non_payable",
+    "name": "Hot Water Bag - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "inclusion": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "E0220",
+          "A9273"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "Hot Water Bag"
+        ]
+      },
+      {
+        "column": "ACTIVITY_DESCRIPTION",
+        "codes": [
+          "Hot Water Bag"
+        ]
+      }
+    ]
+  },
+  "pillows_non_payable": {
+    "trigger_key": "pillows_non_payable",
+    "name": "Pillows - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "inclusion": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "E0190"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "Pillows"
+        ]
+      },
+      {
+        "column": "ACTIVITY_DESCRIPTION",
+        "codes": [
+          "Pillows"
+        ]
+      }
+    ]
+  },
+  "antiseptics_non_payable": {
+    "trigger_key": "antiseptics_non_payable",
+    "name": "Antispetics - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "incl_codes": [
+      "A4674",
+      "0000-000000-000127",
+      "A4248",
+      "6030F"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  },
+  "diapers_non_payable": {
+    "trigger_key": "diapers_non_payable",
+    "name": "Diapers - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "inclusion": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "T4543",
+          "T4521",
+          "T4522",
+          "T4523",
+          "T4524",
+          "T4529",
+          "T4530",
+          "T4538",
+          "T4539",
+          "A4520"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "Diapers"
+        ]
+      },
+      {
+        "column": "ACTIVITY_DESCRIPTION",
+        "codes": [
+          "Diapers"
+        ]
+      }
+    ]
+  },
+  "moisturizer_non_payable": {
+    "trigger_key": "moisturizer_non_payable",
+    "name": "Moisturizer - Not Payable",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "inclusion": [
+      {
+        "column": "ACTIVITY_CODE",
+        "codes": [
+          "A6250"
+        ]
+      },
+      {
+        "column": "ACTIVITY_INTERNAL_DESCRIPTION",
+        "codes": [
+          "Moisturizer"
+        ]
+      },
+      {
+        "column": "ACTIVITY_DESCRIPTION",
+        "codes": [
+          "Moisturizer"
+        ]
+      }
+    ]
+  },
+  "al_abdulghani_motors": {
+    "trigger_key": "al_abdulghani_motors",
+    "name": "AL ABDULGHANI MOTORS - Dental Procedures & Consultation",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "policy_numbers": [
+      "AK/HC/00142/3/3A",
+      "AK/HC/00142/3/3"
+    ],
+    "extra_conditions": [
+      {
+        "column": "POLICY_NUMBER",
+        "condition": {
+          "isin": [
+            "AK/HC/00142/3/3A",
+            "AK/HC/00142/3/3"
+          ]
+        }
+      },
+      {
+        "column": "CORPORATE_NAME",
+        "condition": {
+          "eq": "AL ABDULGHANI MOTORS"
+        }
+      },
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "DENTAL"
+        }
+      }
+    ],
+    "excl_providers": [
+      "KINGS DENTAL CENTER - AL WAKRA",
+      "KINGS DENTAL CENTER - AL HILAL",
+      "KINGS DENTAL CENTER - AL KHOR",
+      "DIVINE DENTAL CLINIC",
+      "FAIRVIEW DENTAL CARE",
+      "CRAFT DENTAL CENTER",
+      "GREEN HEALTH CLINIC",
+      "ELEGANT SMILE DENTAL CLINIC",
+      "THE PEARL DERMATOLOGY AND LASER CENTER- AL WAAB",
+      "THE PEARL DERMATOLOGY AND LASER CENTER- AL WAKRA",
+      "THE PEARL DERMATOLOGY AND LASER CENTER- UMM SALAL",
+      "AL ABEER DENTAL CENTRE - MUATHER",
+      "SHAM DENTAL",
+      "DENTAL ASIAN TOWN"
+    ]
+  },
+  "op_maternity_cmv": {
+    "trigger_key": "op_maternity_cmv",
+    "name": "OP Maternity - CMV",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "86644",
+      "86645",
+      "87495",
+      "87496",
+      "87497"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "extra_conditions": [
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "OUT-PATIENT MATERNITY"
+        }
+      }
+    ]
+  },
+  "op_maternity_toxoplasma": {
+    "trigger_key": "op_maternity_toxoplasma",
+    "name": "OP Maternity Ã¢â‚¬â€œ TOXOPLASMA",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "86777",
+      "86778"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "extra_conditions": [
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "OUT-PATIENT MATERNITY"
+        }
+      }
+    ]
+  },
+  "op_maternity_qatar_charity": {
+    "trigger_key": "op_maternity_qatar_charity",
+    "name": "OP Maternity Ã¢â‚¬â€œ Qatar Charity",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "AK/HC/00191/0/3",
+      "AK/HC/00191/1/3"
+    ],
+    "incl_col": "POLICY_NUMBER",
+    "extra_conditions": [
+      {
+        "column": "CORPORATE_NAME",
+        "condition": {
+          "eq": "Qatar Charity"
+        }
+      },
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "OUT-PATIENT MATERNITY"
+        }
+      }
+    ]
+  },
+  "op_optical_qatar_charity": {
+    "trigger_key": "op_optical_qatar_charity",
+    "name": "OP Optical Ã¢â‚¬â€œ Qatar Charity",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "AK/HC/00191/0/3",
+      "AK/HC/00191/1/3"
+    ],
+    "incl_col": "POLICY_NUMBER",
+    "excl_codes": [
+      "Yateem Optician",
+      "YATEEM OPTICIAN - MUSHEIREB",
+      "YATEEM OPTICIAN - RAMADA",
+      "YATEEM OPTICIAN- DOHA MALL",
+      "YATEEM OPTICIAN- RAYYAN",
+      "YATEEM OPTICIAN-AL NASSER",
+      "YATEEM OPTICIAN-CITY CENTER",
+      "YATEEM OPTICIAN-DOHA FESTIVAL CITY",
+      "YATEEM OPTICIAN-KHOR",
+      "YATEEM OPTICIAN-LAGOONA",
+      "YATEEM OPTICIAN-MALL OF QATAR",
+      "YATEEM OPTICIAN-VENDOME",
+      "YATEEM OPTICIAN-WAKRA",
+      "QATAR OPTICS - AL KHOR",
+      "QATAR OPTICS - CITY CENTER",
+      "QATAR OPTICS - HYATT PLAZA",
+      "QATAR OPTICS - LANDMARK",
+      "QATAR OPTICS - MALL OF QATAR",
+      "QATAR OPTICS - SALWA ROAD",
+      "QATAR OPTICS- PLACE VENDOME"
+    ],
+    "excl_col": "PROVIDER_NAME",
+    "extra_conditions": [
+      {
+        "column": "CORPORATE_NAME",
+        "condition": {
+          "eq": "Qatar Charity"
+        }
+      },
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "OPTICAL"
+        }
+      }
+    ]
+  },
+  "al_jazeera_media_network": {
+    "trigger_key": "al_jazeera_media_network",
+    "name": "Health Check-Up Ã¢â‚¬â€œ Al Jazeera Media Network",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "82306",
+      "82607",
+      "82728"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "extra_conditions": [
+      {
+        "column": "CORPORATE_NAME",
+        "condition": {
+          "eq": "AL JAZEERA MEDIA NETWORK"
+        }
+      },
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "HEALTH CHECK-UP"
+        }
+      }
+    ]
+  },
+  "dental_mofa": {
+    "trigger_key": "dental_mofa",
+    "name": "Dental MOFA",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "D2999"
+    ],
+    "incl_col": "ACTIVITY_CODE",
+    "extra_conditions": [
+      {
+        "column": "CORPORATE_NAME",
+        "condition": {
+          "eq": "MINISTRY OF FOREIGN AFFAIRS"
+        }
+      },
+      {
+        "column": "BENEFIT_TYPE",
+        "condition": {
+          "eq": "DENTAL"
+        }
+      }
+    ]
+  },
+  "free_total_testosterone_rule": {
+    "trigger_key": "free_total_testosterone_rule",
+    "name": "Free Testosterone & Total Testosterone in same preauth/claim",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "pair_rule": {
+      "code_column": "ACTIVITY_CODE",
+      "pairs": [
+        {
+          "A": [
+            "84402"
+          ],
+          "B": [
+            "84403"
+          ]
+        }
+      ]
+    }
+  },
+  "laryngoscopy_nasoendoscopy_rule": {
+    "trigger_key": "laryngoscopy_nasoendoscopy_rule",
+    "name": "Laryngoscopy and Naso-endoscopy- Consultation in Same claim / pre-auth",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "pair_rule": {
+      "code_column": "ACTIVITY_CODE",
+      "pairs": [
+        {
+          "A": [
+            "31231",
+            "31505"
+          ],
+          "B": [
+            "9",
+            "9.01",
+            "9.02",
+            "10",
+            "10.01",
+            "10.02",
+            "11",
+            "11.01",
+            "11.02",
+            "13",
+            "21",
+            "22",
+            "23",
+            "61.01",
+            "61.02",
+            "61.03",
+            "61.04",
+            "61.05",
+            "61.06",
+            "61.07",
+            "61.08",
+            "61.09",
+            "61.11",
+            "61.12",
+            "63",
+            "63.01",
+            "63.02",
+            "63.03",
+            "63.04",
+            "63.05",
+            "99202",
+            "99203",
+            "99204",
+            "99205",
+            "99211",
+            "99212",
+            "99213",
+            "99214",
+            "99215",
+            "99221",
+            "99222",
+            "99223",
+            "99231",
+            "99232",
+            "99233",
+            "99234",
+            "99235",
+            "99236",
+            "99238",
+            "99239",
+            "99241",
+            "99242",
+            "99243",
+            "99244",
+            "99245",
+            "99252",
+            "99253",
+            "99254",
+            "99255",
+            "99281",
+            "99282",
+            "99283",
+            "99284",
+            "99285",
+            "99288",
+            "99291",
+            "99292",
+            "99304",
+            "99305",
+            "99306",
+            "99307",
+            "99308",
+            "99309",
+            "99310",
+            "99315",
+            "99316",
+            "99341",
+            "99342",
+            "99344",
+            "99345",
+            "99347",
+            "99348",
+            "99349",
+            "99350",
+            "99358",
+            "99359",
+            "99360",
+            "99366",
+            "99367",
+            "99368",
+            "99374",
+            "99375",
+            "99377",
+            "99378",
+            "99379",
+            "99380",
+            "99381",
+            "99382",
+            "99383",
+            "99384",
+            "99385",
+            "99386",
+            "99387",
+            "99391",
+            "99392",
+            "99393",
+            "99394",
+            "99395",
+            "99396",
+            "99397",
+            "99401",
+            "99402",
+            "99403",
+            "99404",
+            "99406",
+            "99407",
+            "99408",
+            "99409",
+            "99411",
+            "99412",
+            "99429",
+            "99441",
+            "99442",
+            "99443",
+            "99450",
+            "99455",
+            "99456",
+            "99460",
+            "99461",
+            "99462",
+            "99463",
+            "99464",
+            "99465",
+            "99466",
+            "99467",
+            "99468",
+            "99469",
+            "99471",
+            "99472",
+            "99475",
+            "99476",
+            "99477",
+            "99478",
+            "99479",
+            "99480",
+            "99499",
+            "9500",
+            "99501",
+            "99502",
+            "99503",
+            "99504",
+            "99505",
+            "99506",
+            "99507",
+            "99509",
+            "99510",
+            "99511",
+            "99512",
+            "99600",
+            "99601",
+            "99602",
+            "99605",
+            "99606",
+            "99607"
+          ]
+        }
+      ]
+    }
+  },
+  "troponin_cpkmb_rule": {
+    "trigger_key": "troponin_cpkmb_rule",
+    "name": "Troponin and CPK-MB in Same claim / pre-auth",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "pair_rule": {
+      "code_column": "ACTIVITY_CODE",
+      "pairs": [
+        {
+          "A": [
+            "84484"
+          ],
+          "B": [
+            "82553",
+            "82550"
+          ]
+        }
+      ]
+    }
+  },
+  "general_exclusion_gonococcal": {
+    "trigger_key": "general_exclusion_gonococcal",
+    "name": "General exclusion(STD)-Gonococcal infection",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "icd_codes": [
+      "A54.00",
+      "A54.01",
+      "A54.02",
+      "A54.03",
+      "A54.09",
+      "A54.1",
+      "A54.23",
+      "A54.24",
+      "A54.29",
+      "A54.89",
+      "A54.9"
+    ],
+    "inclusion": [
+      {
+        "column": "PRIMARY_ICD_CODE",
+        "codes": "__icd_codes__"
+      },
+      {
+        "column": "SECONDARY_ICD_CODE",
+        "codes": "__icd_codes__"
+      }
+    ]
+  },
+  "general_exclusion_syphilis": {
+    "trigger_key": "general_exclusion_syphilis",
+    "name": "General exclusion - Syphilis",
+    "active": true,
+    "case_type": "both",
+    "scope": "generic",
+    "review_req": "none",
+    "icd_codes": [
+      "A50.06",
+      "A50.07",
+      "A50.08",
+      "A50.09",
+      "A50.1",
+      "A50.2",
+      "A50.40",
+      "A50.49",
+      "A50.54",
+      "A50.59",
+      "A50.6",
+      "A50.7",
+      "A50.9",
+      "A51.0",
+      "A51.1",
+      "A51.2",
+      "A51.39",
+      "A51.5",
+      "A51.9",
+      "A52.00",
+      "A52.05",
+      "A52.09",
+      "A52.10",
+      "A52.12",
+      "A52.19",
+      "A52.2",
+      "A52.3",
+      "A52.72",
+      "A52.73",
+      "A52.74",
+      "A52.75",
+      "A52.76",
+      "A52.77",
+      "A52.78",
+      "A52.79",
+      "A52.8",
+      "A52.9",
+      "A53.0",
+      "A53.9",
+      "A65"
+    ],
+    "inclusion": [
+      {
+        "column": "PRIMARY_ICD_CODE",
+        "codes": "__icd_codes__"
+      },
+      {
+        "column": "SECONDARY_ICD_CODE",
+        "codes": "__icd_codes__"
+      }
+    ]
+  },
+  "general_exclusion_mounjaro": {
+    "trigger_key": "general_exclusion_mounjaro",
+    "name": "General exclusion-Mounjaro ( Tirzepatide )",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "0094-935206-1021",
+      "0000-000000-003291",
+      "0000-000000-003290",
+      "0094-935207-1021",
+      "0094-935201-1021",
+      "0000-000000-003289",
+      "0094-935202-1021",
+      "0000-000000-003294",
+      "0094-935204-1021",
+      "0000-000000-003293",
+      "0000-000000-003292",
+      "0094-935205-1021"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  },
+  "weight_loss_glp1_exclusion": {
+    "trigger_key": "weight_loss_glp1_exclusion",
+    "name": "General exclusion - Weight Loss / GLP-1",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "text_column": "PRESENTING_COMPLAINTS",
+    "keywords": [
+      "weight loss",
+      "weight management",
+      "slimming",
+      "obesity",
+      "glp-1",
+      "glp1",
+      "mounjaro",
+      "ozempic",
+      "tirzepatide",
+      "semaglutide",
+      "weekly injection",
+      "dose escalation",
+      "dose increase",
+      "restart",
+      "maintenance dose",
+      "switch to",
+      "resume",
+      "uptitrate",
+      "downtitrate"
+    ]
+  },
+  "cosmetic_exclusion": {
+    "trigger_key": "cosmetic_exclusion",
+    "name": "General exclusion - Cosmetic",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "text_column": "PRESENTING_COMPLAINTS",
+    "keywords": [
+      "hair loss",
+      "hair fall",
+      "alopecia",
+      "hirsutism",
+      "cosmetic",
+      "aesthetic",
+      "skin pigmentation",
+      "lipoma"
+    ]
+  },
+  "infertility_exclusion": {
+    "trigger_key": "infertility_exclusion",
+    "name": "General Exclusion: In-Fertility",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "text_column": "PRESENTING_COMPLAINTS",
+    "keywords": [
+      "infertility",
+      "fertility",
+      "ivf",
+      "iui",
+      "trying to conceive",
+      "preconception",
+      "semen analysis",
+      "erectile dysfunction",
+      "low libido",
+      "sexual problem",
+      "performance issue"
+    ]
+  },
+  "physiotherapy_pa_mandatory": {
+    "trigger_key": "physiotherapy_pa_mandatory",
+    "name": "Physiotherapy- PA Mandatory",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "physio_codes": [
+      "97001",
+      "97002",
+      "97110",
+      "97112",
+      "97116",
+      "97140",
+      "97530",
+      "97535",
+      "97035",
+      "97014",
+      "97010",
+      "97750",
+      "97760",
+      "97761",
+      "97799"
+    ],
+    "preauth": {
+      "preauth_columns": [
+        "PRE_AUTH_NUMBER",
+        "PREAUTH_NUMBER"
+      ],
+      "complaint_column": "PRESENTING_COMPLAINTS",
+      "regex": "PA\\d+"
+    }
+  },
+  "silymarin_exclusion": {
+    "trigger_key": "silymarin_exclusion",
+    "name": "General Exclusion: SilyMarin (Legalon Forte)",
+    "active": true,
+    "case_type": "both",
+    "scope": "account specific",
+    "review_req": "none",
+    "incl_codes": [
+      "0645-195501-1451",
+      "0000-000000-000587",
+      "0000-000000-000588",
+      "0077-195501-1451",
+      "0000-000000-004169",
+      "0000-000000-004176"
+    ],
+    "incl_col": "ACTIVITY_CODE"
+  }
+}
